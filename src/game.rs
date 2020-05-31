@@ -7,6 +7,8 @@ use sdl2::EventPump;
 use sdl2::image::LoadTexture;
 use std::time::Duration;
 use std::collections::LinkedList;
+use std::iter::IntoIterator;
+use Iterator;
 use crate::chess::*;
 
 const ROW_NUM: usize = 10;
@@ -22,6 +24,7 @@ pub struct Game {
     event_pump: EventPump,
     selected_chess: Option<(usize, usize)>,
     selected_frame: Texture,
+    movable_pos: LinkedList<(usize, usize)>,
 }
 
 impl Game {
@@ -85,8 +88,9 @@ impl Game {
             board_size: (0, 0),
             chess_size: (0, 0),
             selected_chess: None,
+            movable_pos: LinkedList::new(),
             canvas,
-            event_pump
+            event_pump,
         };
 
         game.load_fen("rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1");
@@ -114,8 +118,8 @@ impl Game {
         )
     }
 
-    fn draw_frame(&mut self, tgtPos: LinkedList<(usize, usize)>) -> Result<(), String> {
-        for pos in tgtPos {
+    fn draw_frame(&mut self, tgt_pos: &LinkedList<(usize, usize)>) -> Result<(), String> {
+        for pos in tgt_pos {
             self.canvas.copy(&self.selected_frame, None, self.get_dst_rect(pos.0, pos.1))?;
         }
         Ok(())
@@ -123,17 +127,20 @@ impl Game {
 
     fn process_move(&mut self) -> Result<(), String> {
         if let Some((row, col)) = self.selected_chess {
-            let mut tgtPos = LinkedList::new();
-            tgtPos.push_back((row, col));
+            let mut tgt_pos = LinkedList::new();
+            tgt_pos.push_back((row, col));
 
+            let mut movable_pos = LinkedList::new();
             match get_chess_type(self.chesses[row][col].id) {
                 PAWN => {
-                    tgtPos.append(&mut self.move_pawn((row, col)));
+                    movable_pos = self.move_pawn((row, col));
                 }
                 _ => {}
             }
 
-            self.draw_frame(tgtPos)?;
+            self.draw_frame(&tgt_pos)?;
+            self.draw_frame(&movable_pos)?;
+            self.movable_pos = movable_pos;
         }
         Ok(())
     }
@@ -163,16 +170,16 @@ impl Game {
         let mut result = LinkedList::new();
         match get_chess_role(self.chesses[pos.0][pos.1].id) {
             RED => {
-                result.push_back((pos.0 - 1, pos.1));
+                result.push_back((pos.0.wrapping_sub(1), pos.1));
                 if pos.0 < 5 {
-                    result.push_back((pos.0, pos.1 - 1));
+                    result.push_back((pos.0, pos.1.wrapping_sub(1)));
                     result.push_back((pos.0, pos.1 + 1));
                 }
             },
             BLACK => {
                 result.push_back((pos.0 + 1, pos.1));
                 if pos.0 >= 5 {
-                    result.push_back((pos.0, pos.1 - 1));
+                    result.push_back((pos.0, pos.1.wrapping_sub(1)));
                     result.push_back((pos.0, pos.1 + 1));
                 }
             },
@@ -180,6 +187,11 @@ impl Game {
         }
 
         result.into_iter().filter(Self::check_pos_inrange).collect()
+    }
+
+    fn get_empty_chess(&self) -> Box<Chess> {
+        let texture_creator = self.canvas.texture_creator();
+        Box::new(Chess::new(EMPTY, &texture_creator))
     }
 
     fn get_click_rect(&self, mut pos: (i32, i32)) -> Option<(usize, usize)> {
@@ -193,14 +205,37 @@ impl Game {
         Some((row, col))
     }
 
+    fn switch_player(&mut self) {
+        self.role = if self.role == RED { BLACK }
+                    else { RED }
+    }
+
+    unsafe fn move_chess(&mut self, src: (usize, usize), dst: (usize, usize)) {
+        let p_src: *mut Box<Chess> = &mut self.chesses[src.0][src.1];
+        let p_dst: *mut Box<Chess> = &mut self.chesses[dst.0][dst.1];
+        std::mem::swap(&mut *p_src, &mut *p_dst);
+        *p_src = self.get_empty_chess();
+
+        println!("{:?} -> {:?}", src, dst);
+        self.switch_player()
+    }
+
     fn process_click(&mut self, pos: (i32, i32)) {
         if let Some((row, col)) = self.get_click_rect(pos) {
             if self.chesses[row][col].id == EMPTY || get_chess_role(self.chesses[row][col].id) != self.role {
+                // may be move
+                if let Some(_) = self.movable_pos.iter().find(|&&(r, l)| { return (r, l) == (row, col) }) {
+                    let src_pos = self.selected_chess.unwrap();
+                    unsafe { self.move_chess(src_pos, (row, col)); }
+                }
                 self.selected_chess = None;
+            } else {
+                println!("selected_chess: ({}, {})", row, col);
+                self.selected_chess = Some((row, col));
                 return;
             }
-            println!("selected_chess: ({}, {})", row, col);
-            self.selected_chess = Some((row, col));
+
+            self.movable_pos.clear();
         }
     }
 
