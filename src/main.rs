@@ -6,6 +6,7 @@ mod chess;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+use sdl2::rect::Rect;
 use sdl2::render::{WindowCanvas, Texture};
 use game::*;
 use sdl2::image::{self, LoadTexture, InitFlag};
@@ -20,11 +21,14 @@ fn main() -> Result<(), String> {
 
     let windows = video_sys.window("ChinessChess", WINDOW_WIDTH, WINDOW_HEIGHT)
         .position_centered()
+        .allow_highdpi()
         .build().expect("could not initialize video subsystem");
+
 
     let mut canvas = windows.into_canvas()
         .present_vsync()
         .build().expect("could not make a canvas");
+    canvas.set_logical_size(WINDOW_WIDTH, WINDOW_HEIGHT).expect("set logical_size failed");
 
     let _image_ctx = image::init(InitFlag::JPG)?;
     let texture_creator = canvas.texture_creator();
