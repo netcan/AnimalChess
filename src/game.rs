@@ -19,6 +19,8 @@ pub struct Game {
     chess_size: (u32, u32),
     canvas: WindowCanvas,
     event_pump: EventPump,
+    selected_chess: Option<(usize, usize)>,
+    selected_frame: Texture,
 }
 
 impl Game {
@@ -78,8 +80,10 @@ impl Game {
             ROW_NUM],
             role: RED,
             board: texture_creator.load_texture("assets/board.jpg").unwrap(),
+            selected_frame: texture_creator.load_texture("assets/oos.gif").unwrap(),
             board_size: (0, 0),
             chess_size: (0, 0),
+            selected_chess: None,
             canvas,
             event_pump
         };
@@ -100,35 +104,62 @@ impl Game {
         game
     }
 
-    pub fn render(&mut self) -> Result<(), String> {
+    fn get_chess_rect(&self, row: usize, col: usize) -> Rect {
+        Rect::new(
+            col as i32 * self.chess_size.0 as i32 + Self::CHESS_OFFSET.0,
+            row as i32 * self.chess_size.1 as i32 + Self::CHESS_OFFSET.1,
+            self.chess_size.0,
+            self.chess_size.1
+        )
+    }
+
+    fn render(&mut self) -> Result<(), String> {
         self.canvas.clear();
         self.canvas.copy(&self.board, None, None)?;
         for i in 0..ROW_NUM {
             for j in 0..COL_NUM {
-                self.canvas.copy(&self.chesses[i][j].texture, None, Rect::new(
-                    j as i32 * self.chess_size.0 as i32 + Self::CHESS_OFFSET.0,
-                    i as i32 * self.chess_size.1 as i32 + Self::CHESS_OFFSET.1,
-                    self.chess_size.0,
-                    self.chess_size.1
-                ))?;
+                self.canvas.copy(&self.chesses[i][j].texture,
+                    None, self.get_chess_rect(i, j))?;
             }
         }
+
+        if let Some((row, col)) = self.selected_chess {
+            self.canvas.copy(&self.selected_frame, None, self.get_chess_rect(row, col))?;
+        }
+
         self.canvas.present();
         Ok(())
+    }
+
+    fn process_click(&mut self, mut pos: (i32, i32)) {
+        pos.0 -= Self::CHESS_OFFSET.0;
+        pos.1 -= Self::CHESS_OFFSET.1;
+        if pos.0 < 0 || pos.1 < 0 { return; }
+        let row = (pos.1 / self.chess_size.1 as i32) as usize;
+        let col = (pos.0 / self.chess_size.0 as i32) as usize;
+
+        if self.chesses[row][col].id == EMPTY {
+            self.selected_chess = None;
+            return;
+        }
+        println!("selected_chess: ({}, {})", row, col);
+        self.selected_chess = Some((row, col));
     }
 
     pub fn run(&mut self) -> Result<(), String> {
         'running: loop {
             // handle event
+            let mut click_pos = (0, 0);
             for event in self.event_pump.poll_iter() {
                 match event {
-                    Event::Quit {..} |
-                        Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                            break 'running
-                        },
+                    Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => { break 'running }
+                    Event::MouseButtonDown {x, y, ..} => { click_pos = (x, y); }
                     _ => {}
                 }
             }
+
+            self.process_click(click_pos);
+
             // update
             self.render()?;
 
