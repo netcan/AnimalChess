@@ -7,8 +7,6 @@ use sdl2::EventPump;
 use sdl2::image::LoadTexture;
 use std::time::Duration;
 use std::collections::LinkedList;
-use std::iter::IntoIterator;
-use Iterator;
 use crate::chess::*;
 
 const ROW_NUM: usize = 10;
@@ -162,31 +160,35 @@ impl Game {
     }
 
     // check pos is outrange
-    fn check_pos_inrange(pos: &(usize, usize)) -> bool {
-        return pos.0 < ROW_NUM && pos.1 < COL_NUM;
+    fn check_pos_valid(&self, pos: &(usize, usize)) -> bool {
+        return pos.0 < ROW_NUM && pos.1 < COL_NUM &&
+            (self.chesses[pos.0][pos.1].id == EMPTY ||
+            get_chess_role(self.chesses[pos.0][pos.1].id) != self.role);
     }
 
     fn move_pawn(&self, pos: (usize, usize)) -> LinkedList<(usize, usize)> {
         let mut result = LinkedList::new();
+        let mut move_left_right = false;
         match get_chess_role(self.chesses[pos.0][pos.1].id) {
             RED => {
                 result.push_back((pos.0.wrapping_sub(1), pos.1));
-                if pos.0 < 5 {
-                    result.push_back((pos.0, pos.1.wrapping_sub(1)));
-                    result.push_back((pos.0, pos.1 + 1));
-                }
+                if pos.0 < 5 { move_left_right = true; }
             },
             BLACK => {
                 result.push_back((pos.0 + 1, pos.1));
-                if pos.0 >= 5 {
-                    result.push_back((pos.0, pos.1.wrapping_sub(1)));
-                    result.push_back((pos.0, pos.1 + 1));
-                }
+                if pos.0 >= 5 { move_left_right = true; }
             },
             _ => { unreachable!(); }
         }
 
-        result.into_iter().filter(Self::check_pos_inrange).collect()
+        if move_left_right {
+            result.push_back((pos.0, pos.1.wrapping_sub(1)));
+            result.push_back((pos.0, pos.1 + 1));
+        }
+
+        result.into_iter().filter(|&(r, c)| {
+            self.check_pos_valid(&(r, c))
+        }).collect()
     }
 
     fn get_empty_chess(&self) -> Box<Chess> {
