@@ -22,41 +22,48 @@ pub fn get_chess_id(role: Role, chess_type: ChessType) -> ChessId {
     role | chess_type
 }
 
-fn get_chess_texture<T>(chess_id: ChessId, texture_creator: &TextureCreator<T>) -> Texture {
-    let mut path = String::from("assets/");
-    let chess_type = chess_id & 0x7;
-    let role = chess_id & 0x8;
+pub fn get_chess_role(id: ChessId) -> Role {
+    return id & 0x8;
+}
 
-    match role {
-        RED   => { path.push('r'); }
-        BLACK => { path.push('b'); }
-        _     => unreachable!()
-    }
-
-    match chess_type {
-        KING    => { path.push_str("k.gif"); }
-        ADVISOR => { path.push_str("a.gif"); }
-        BISHOP  => { path.push_str("b.gif"); }
-        KNIGHT  => { path.push_str("n.gif"); }
-        ROOK    => { path.push_str("r.gif"); }
-        CANNON  => { path.push_str("c.gif"); }
-        PAWN    => { path.push_str("p.gif"); }
-        _       => unreachable!()
-    }
-
-    texture_creator.load_texture(path).expect("load texture failed")
+pub fn get_chess_type(id: ChessId) -> ChessType {
+    return id & 0x7;
 }
 
 pub struct Chess {
     pub id: ChessId,
-    pub texture: Option<Texture>,
+    pub texture: Texture,
 }
 
 impl Chess {
-    pub fn new<T>(id: ChessId, texture_creator: &TextureCreator<T>) -> Self {
-        match id {
-            EMPTY => Self { id: EMPTY, texture: None },
-            id_ => { Self { id: id_, texture: Some(get_chess_texture(id, texture_creator)) } }
+    fn get_chess_texture<T>(chess_id: ChessId, texture_creator: &TextureCreator<T>) -> Texture {
+        let mut path = String::from("assets/");
+        match chess_id {
+            EMPTY => { path.push_str("oo.gif"); }
+            id => {
+                match get_chess_role(id) {
+                    RED   => { path.push('r'); }
+                    BLACK => { path.push('b'); }
+                    _     => unreachable!()
+                }
+
+                match get_chess_type(id) {
+                    KING    => { path.push_str("k.gif"); }
+                    ADVISOR => { path.push_str("a.gif"); }
+                    BISHOP  => { path.push_str("b.gif"); }
+                    KNIGHT  => { path.push_str("n.gif"); }
+                    ROOK    => { path.push_str("r.gif"); }
+                    CANNON  => { path.push_str("c.gif"); }
+                    PAWN    => { path.push_str("p.gif"); }
+                    _       => unreachable!()
+                }
+            }
         }
+
+        texture_creator.load_texture(path).expect("load texture failed")
+    }
+
+    pub fn new<T>(id: ChessId, texture_creator: &TextureCreator<T>) -> Self {
+        Self { id, texture: Self::get_chess_texture(id, texture_creator) }
     }
 }

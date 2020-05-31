@@ -15,6 +15,7 @@ fn main() -> Result<(), String> {
 
     let windows = video_sys.window("ChinessChess", WINDOW_WIDTH, WINDOW_HEIGHT)
         .position_centered()
+        .resizable()
         .allow_highdpi()
         .build().expect("could not initialize video subsystem");
 
