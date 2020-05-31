@@ -6,6 +6,7 @@ use sdl2::keyboard::Keycode;
 use sdl2::EventPump;
 use sdl2::image::LoadTexture;
 use std::time::Duration;
+use std::collections::LinkedList;
 use crate::chess::*;
 
 const ROW_NUM: usize = 10;
@@ -104,7 +105,7 @@ impl Game {
         game
     }
 
-    fn get_chess_rect(&self, row: usize, col: usize) -> Rect {
+    fn get_dst_rect(&self, row: usize, col: usize) -> Rect {
         Rect::new(
             col as i32 * self.chess_size.0 as i32 + Self::CHESS_OFFSET.0,
             row as i32 * self.chess_size.1 as i32 + Self::CHESS_OFFSET.1,
@@ -113,37 +114,94 @@ impl Game {
         )
     }
 
+    fn draw_frame(&mut self, tgtPos: LinkedList<(usize, usize)>) -> Result<(), String> {
+        for pos in tgtPos {
+            self.canvas.copy(&self.selected_frame, None, self.get_dst_rect(pos.0, pos.1))?;
+        }
+        Ok(())
+    }
+
+    fn process_move(&mut self) -> Result<(), String> {
+        if let Some((row, col)) = self.selected_chess {
+            let mut tgtPos = LinkedList::new();
+            tgtPos.push_back((row, col));
+
+            match get_chess_type(self.chesses[row][col].id) {
+                PAWN => {
+                    tgtPos.append(&mut self.move_pawn((row, col)));
+                }
+                _ => {}
+            }
+
+            self.draw_frame(tgtPos)?;
+        }
+        Ok(())
+    }
+
     fn render(&mut self) -> Result<(), String> {
         self.canvas.clear();
         self.canvas.copy(&self.board, None, None)?;
         for i in 0..ROW_NUM {
             for j in 0..COL_NUM {
                 self.canvas.copy(&self.chesses[i][j].texture,
-                    None, self.get_chess_rect(i, j))?;
+                    None, self.get_dst_rect(i, j))?;
             }
         }
 
-        if let Some((row, col)) = self.selected_chess {
-            self.canvas.copy(&self.selected_frame, None, self.get_chess_rect(row, col))?;
-        }
+        self.process_move()?;
 
         self.canvas.present();
         Ok(())
     }
 
-    fn process_click(&mut self, mut pos: (i32, i32)) {
+    // check pos is outrange
+    fn check_pos_inrange(pos: &(usize, usize)) -> bool {
+        return pos.0 < ROW_NUM && pos.1 < COL_NUM;
+    }
+
+    fn move_pawn(&self, pos: (usize, usize)) -> LinkedList<(usize, usize)> {
+        let mut result = LinkedList::new();
+        match get_chess_role(self.chesses[pos.0][pos.1].id) {
+            RED => {
+                result.push_back((pos.0 - 1, pos.1));
+                if pos.0 < 5 {
+                    result.push_back((pos.0, pos.1 - 1));
+                    result.push_back((pos.0, pos.1 + 1));
+                }
+            },
+            BLACK => {
+                result.push_back((pos.0 + 1, pos.1));
+                if pos.0 >= 5 {
+                    result.push_back((pos.0, pos.1 - 1));
+                    result.push_back((pos.0, pos.1 + 1));
+                }
+            },
+            _ => { unreachable!(); }
+        }
+
+        result.into_iter().filter(Self::check_pos_inrange).collect()
+    }
+
+    fn get_click_rect(&self, mut pos: (i32, i32)) -> Option<(usize, usize)> {
         pos.0 -= Self::CHESS_OFFSET.0;
         pos.1 -= Self::CHESS_OFFSET.1;
-        if pos.0 < 0 || pos.1 < 0 { return; }
+        if pos.0 < 0 || pos.1 < 0 { return None; }
+
         let row = (pos.1 / self.chess_size.1 as i32) as usize;
         let col = (pos.0 / self.chess_size.0 as i32) as usize;
 
-        if self.chesses[row][col].id == EMPTY {
-            self.selected_chess = None;
-            return;
+        Some((row, col))
+    }
+
+    fn process_click(&mut self, pos: (i32, i32)) {
+        if let Some((row, col)) = self.get_click_rect(pos) {
+            if self.chesses[row][col].id == EMPTY || get_chess_role(self.chesses[row][col].id) != self.role {
+                self.selected_chess = None;
+                return;
+            }
+            println!("selected_chess: ({}, {})", row, col);
+            self.selected_chess = Some((row, col));
         }
-        println!("selected_chess: ({}, {})", row, col);
-        self.selected_chess = Some((row, col));
     }
 
     pub fn run(&mut self) -> Result<(), String> {
