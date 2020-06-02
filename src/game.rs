@@ -123,16 +123,15 @@ impl Game {
         Ok(())
     }
 
-    fn process_move(&mut self) -> Result<(), String> {
+    fn process_selected_chess(&mut self) -> Result<(), String> {
         if let Some((row, col)) = self.selected_chess {
             let mut tgt_pos = LinkedList::new();
             tgt_pos.push_back((row, col));
 
             let mut movable_pos = LinkedList::new();
             match get_chess_type(self.chesses[row][col].id) {
-                PAWN => {
-                    movable_pos = self.move_pawn((row, col));
-                }
+                PAWN => { movable_pos = self.move_pawn((row, col)); }
+                KING => { movable_pos = self.move_king((row, col)); }
                 _ => {}
             }
 
@@ -153,7 +152,7 @@ impl Game {
             }
         }
 
-        self.process_move()?;
+        self.process_selected_chess()?;
 
         self.canvas.present();
         Ok(())
@@ -188,6 +187,21 @@ impl Game {
 
         result.into_iter().filter(|&(r, c)| {
             self.check_pos_valid(&(r, c))
+        }).collect()
+    }
+
+    fn move_king(&self, pos: (usize, usize)) -> LinkedList<(usize, usize)>{
+        let mut result = LinkedList::new();
+        result.push_back((pos.0 + 1, pos.1));
+        result.push_back((pos.0, pos.1 + 1));
+        result.push_back((pos.0.wrapping_sub(1), pos.1));
+        result.push_back((pos.0, pos.1.wrapping_sub(1)));
+        // println!("{:?}", result);
+
+        result.into_iter().filter(|&(r, c)| {
+            self.check_pos_valid(&(r, c))
+                && (c >= 3 && c <= 5)
+                && (if get_chess_role(self.chesses[pos.0][pos.1].id) == RED { r >= 7 } else { r <= 2 })
         }).collect()
     }
 
