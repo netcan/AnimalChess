@@ -128,7 +128,9 @@ impl Game {
 
             let mut movable_pos = LinkedList::new();
             match get_chess_type(self.chesses[row][col].id) {
-                _ => { movable_pos = self.generate_basic_steps(&(row, col)); }
+                RAT =>          { movable_pos = self.generate_basic_steps(&(row, col), true);  }
+                TIGER | LION => { movable_pos = self.generate_tl_steps(&(row, col));           }
+                _ =>            { movable_pos = self.generate_basic_steps(&(row, col), false); }
             }
 
             self.draw_frame(&tgt_pos)?;
@@ -169,23 +171,85 @@ impl Game {
         );
 
         match (src_chess_type, dst_chess_type) {
-            (RAT, ELEPHANT) => true,
+            (RAT, ELEPHANT) => ! Self::check_in_water(src),
             (ELEPHANT, RAT) => false,
             (src, dst) => src <= dst
         }
     }
 
-    fn generate_basic_steps(&self, src: &(usize, usize)) -> LinkedList<(usize, usize)> {
+    fn check_in_water(src: &(usize, usize)) -> bool {
+        src.0 >= 3 && src.0 <= 5 &&
+            src.1 % 3 != 0
+    }
+
+    fn check_rat(&self, src: &(usize, usize), dst: &(usize, usize)) -> bool {
+        if src.0 == dst.0 {
+            for j in src.1.min(dst.1) ..= src.1.max(dst.1) {
+                if get_chess_type(self.chesses[src.0][j].id) == RAT {
+                    return true;
+                }
+            }
+        } else {
+            for i in src.0.min(dst.0) ..= src.0.max(dst.0) {
+                if get_chess_type(self.chesses[i][dst.1].id) == RAT {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn check_at_bank(src: &(usize, usize)) -> bool {
+        const BANK: [[bool; COL_NUM]; ROW_NUM] = [
+            [false, false, false, false, false, false, false],
+            [false, false, false, false, false, false, false],
+            [false, true,  true,  false, true,  true,  false],
+            [true,  false, false, true,  false, false, true ],
+            [true,  false, false, true,  false, false, true ],
+            [true,  false, false, true,  false, false, true ],
+            [false, true,  true,  false, true,  true,  false],
+            [false, false, false, false, false, false, false],
+            [false, false, false, false, false, false, false],
+        ];
+        BANK[src.0][src.1]
+    }
+
+    fn generate_tl_steps(&self, src: &(usize, usize)) -> LinkedList<(usize, usize)> {
+        let mut basic_steps = self.generate_basic_steps(src, false);
+        if Self::check_at_bank(src) {
+            // [2, 6]
+            if (src.0 + 2) % 4 == 0 {
+                basic_steps.push_back(((src.0 + 4) % 8, src.1));
+            } else {
+                if src.1 % 6 == 0 {
+                    basic_steps.push_back((src.0, 3));
+                } else {
+                    basic_steps.push_back((src.0, 0));
+                    basic_steps.push_back((src.0, 6));
+                }
+            }
+        }
+        basic_steps.into_iter().filter(|dst| {
+            self.check_movable(src, dst) && !self.check_rat(src, dst)
+        }).collect()
+    }
+
+    fn generate_basic_steps(&self, src: &(usize, usize), to_water: bool) -> LinkedList<(usize, usize)> {
         const DX: [i32; 4] = [1, 0, -1, 0];
         const DY: [i32; 4] = [0, 1, 0, -1];
         let (x, y) = (src.0 as i32, src.1 as i32);
         let mut result = LinkedList::new();
         for i in 0..4 {
             let (xx, yy) = (x + DX[i], y + DY[i]);
-            if xx >= 0 && x < ROW_NUM as i32
-                && yy >= 0 && y < COL_NUM as i32 &&
-                    self.check_movable(src, &(xx as usize, yy as usize)) {
-                        result.push_back((xx as usize, yy as usize))
+            if xx >= 0 && xx < ROW_NUM as i32
+                && yy >= 0 && yy < COL_NUM as i32 {
+                    let dst = (xx as usize, yy as usize);
+                    println!("{:?}", dst);
+                    if Self::check_movable(self, src, &dst) {
+                        if ! Self::check_in_water(&dst) || to_water {
+                            result.push_back(dst)
+                        }
+                    }
             }
         }
         result
