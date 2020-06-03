@@ -13,7 +13,7 @@ fn main() -> Result<(), String> {
     let sdl_ctx = sdl2::init()?;
     let video_sys = sdl_ctx.video()?;
 
-    let windows = video_sys.window("ChinessChess", WINDOW_WIDTH, WINDOW_HEIGHT)
+    let windows = video_sys.window("AnimalChess", WINDOW_WIDTH, WINDOW_HEIGHT)
         .position_centered()
         // .resizable()
         .allow_highdpi()

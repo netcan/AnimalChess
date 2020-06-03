@@ -128,9 +128,7 @@ impl Game {
 
             let mut movable_pos = LinkedList::new();
             match get_chess_type(self.chesses[row][col].id) {
-                PAWN => { movable_pos = self.move_pawn((row, col)); }
-                KING => { movable_pos = self.move_king((row, col)); }
-                _ => {}
+                _ => { movable_pos = self.generate_basic_steps(&(row, col)); }
             }
 
             self.draw_frame(&tgt_pos)?;
@@ -156,51 +154,41 @@ impl Game {
         Ok(())
     }
 
-    // check pos is outrange
-    fn check_pos_valid(&self, pos: &(usize, usize)) -> bool {
-        return pos.0 < ROW_NUM && pos.1 < COL_NUM &&
-            (self.chesses[pos.0][pos.1].id == EMPTY ||
-            get_chess_role(self.chesses[pos.0][pos.1].id) != self.role);
+    fn get_src_dst_chess(&self, src: &(usize, usize), dst: &(usize, usize)) -> (ChessId, ChessId) {
+        (self.chesses[src.0][src.1].id,
+         self.chesses[dst.0][dst.1].id)
     }
 
-    fn move_pawn(&self, pos: (usize, usize)) -> LinkedList<(usize, usize)> {
-        let mut result = LinkedList::new();
-        let mut move_left_right = false;
-        match get_chess_role(self.chesses[pos.0][pos.1].id) {
-            RED => {
-                result.push_back((pos.0.wrapping_sub(1), pos.1));
-                if pos.0 < 5 { move_left_right = true; }
-            },
-            BLACK => {
-                result.push_back((pos.0 + 1, pos.1));
-                if pos.0 >= 5 { move_left_right = true; }
-            },
-            _ => { unreachable!(); }
-        }
+    fn check_movable(&self, src: &(usize, usize), dst: &(usize, usize)) -> bool {
+        let (src_chess, dst_chess) = self.get_src_dst_chess(&src, &dst);
+        if dst_chess == EMPTY { return true; }
+        if get_chess_role(src_chess) == get_chess_role(dst_chess) { return false; }
 
-        if move_left_right {
-            result.push_back((pos.0, pos.1.wrapping_sub(1)));
-            result.push_back((pos.0, pos.1 + 1));
-        }
+        let (src_chess_type, dst_chess_type) = (
+            get_chess_type(src_chess), get_chess_type(dst_chess)
+        );
 
-        result.into_iter().filter(|&(r, c)| {
-            self.check_pos_valid(&(r, c))
-        }).collect()
+        match (src_chess_type, dst_chess_type) {
+            (RAT, ELEPHANT) => true,
+            (ELEPHANT, RAT) => false,
+            (src, dst) => src <= dst
+        }
     }
 
-    fn move_king(&self, pos: (usize, usize)) -> LinkedList<(usize, usize)>{
+    fn generate_basic_steps(&self, src: &(usize, usize)) -> LinkedList<(usize, usize)> {
+        const DX: [i32; 4] = [1, 0, -1, 0];
+        const DY: [i32; 4] = [0, 1, 0, -1];
+        let (x, y) = (src.0 as i32, src.1 as i32);
         let mut result = LinkedList::new();
-        result.push_back((pos.0 + 1, pos.1));
-        result.push_back((pos.0, pos.1 + 1));
-        result.push_back((pos.0.wrapping_sub(1), pos.1));
-        result.push_back((pos.0, pos.1.wrapping_sub(1)));
-        // println!("{:?}", result);
-
-        result.into_iter().filter(|&(r, c)| {
-            self.check_pos_valid(&(r, c))
-                && (c >= 3 && c <= 5)
-                && (if get_chess_role(self.chesses[pos.0][pos.1].id) == RED { r >= 7 } else { r <= 2 })
-        }).collect()
+        for i in 0..4 {
+            let (xx, yy) = (x + DX[i], y + DY[i]);
+            if xx >= 0 && x < ROW_NUM as i32
+                && yy >= 0 && y < COL_NUM as i32 &&
+                    self.check_movable(src, &(xx as usize, yy as usize)) {
+                        result.push_back((xx as usize, yy as usize))
+            }
+        }
+        result
     }
 
     fn get_empty_chess(&self) -> Box<Chess> {
