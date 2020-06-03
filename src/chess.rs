@@ -5,16 +5,17 @@ pub type ChessType = u8;
 pub type Role      = u8;
 pub type ChessId   = u8;
 
-pub const KING:    ChessType = 0x1;
-pub const ADVISOR: ChessType = 0x2;
-pub const BISHOP:  ChessType = 0x3;
-pub const KNIGHT:  ChessType = 0x4;
-pub const ROOK:    ChessType = 0x5;
-pub const CANNON:  ChessType = 0x6;
-pub const PAWN:    ChessType = 0x7;
+pub const ELEPHANT: ChessType = 0x0;
+pub const LION:     ChessType = 0x1;
+pub const TIGER:    ChessType = 0x2;
+pub const PANTHER:  ChessType = 0x3;
+pub const WOLF:     ChessType = 0x4;
+pub const DOG:      ChessType = 0x5;
+pub const CAT:      ChessType = 0x6;
+pub const RAT:      ChessType = 0x7;
 
-pub const RED:     Role      = 0x0;
-pub const BLACK:   Role      = 0x8;
+pub const RED:     Role      = 0x8;
+pub const BLACK:   Role      = 0x10;
 
 pub const EMPTY:   ChessId   = 0x0;
 
@@ -23,7 +24,7 @@ pub fn get_chess_id(role: Role, chess_type: ChessType) -> ChessId {
 }
 
 pub fn get_chess_role(id: ChessId) -> Role {
-    return id & 0x8;
+    return id & 0x18;
 }
 
 pub fn get_chess_type(id: ChessId) -> ChessType {
@@ -48,13 +49,14 @@ impl Chess {
                 }
 
                 match get_chess_type(id) {
-                    KING    => { path.push_str("k.gif"); }
-                    ADVISOR => { path.push_str("a.gif"); }
-                    BISHOP  => { path.push_str("b.gif"); }
-                    KNIGHT  => { path.push_str("n.gif"); }
-                    ROOK    => { path.push_str("r.gif"); }
-                    CANNON  => { path.push_str("c.gif"); }
-                    PAWN    => { path.push_str("p.gif"); }
+                    ELEPHANT => { path.push_str("e.png"); }
+                    LION     => { path.push_str("l.png"); }
+                    TIGER    => { path.push_str("t.png"); }
+                    PANTHER  => { path.push_str("p.png"); }
+                    WOLF     => { path.push_str("w.png"); }
+                    DOG      => { path.push_str("d.png"); }
+                    CAT      => { path.push_str("c.png"); }
+                    RAT      => { path.push_str("r.png"); }
                     _       => unreachable!()
                 }
             }

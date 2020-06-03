@@ -6,8 +6,8 @@ mod chess;
 
 use game::*;
 
-const WINDOW_WIDTH: u32 = 521;
-const WINDOW_HEIGHT: u32 = 577;
+const WINDOW_WIDTH: u32 = 500;
+const WINDOW_HEIGHT: u32 = 636;
 
 fn main() -> Result<(), String> {
     let sdl_ctx = sdl2::init()?;

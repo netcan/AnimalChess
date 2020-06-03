@@ -9,15 +9,21 @@ use std::time::Duration;
 use std::collections::LinkedList;
 use crate::chess::*;
 
-const ROW_NUM: usize = 10;
-const COL_NUM: usize = 9;
+const ROW_NUM: usize = 9;
+const COL_NUM: usize = 7;
+
+const BOARD_WIDTH: u32 = 500;
+const BOARD_HEIGHT: u32 = 636;
+const CELL_WIDTH: u32 = 70;
+const CELL_HEIGHT: u32 = 70;
+
+const CHESS_WIDTH: u32 = 64;
+const CHESS_HEIGHT: u32 = 64;
 
 pub struct Game {
     chesses: [[Box<Chess>; COL_NUM]; ROW_NUM],
     role: Role, // 轮到谁下
     board: Texture,
-    board_size: (u32, u32),
-    chess_size: (u32, u32),
     canvas: WindowCanvas,
     event_pump: EventPump,
     selected_chess: Option<(usize, usize)>,
@@ -26,9 +32,9 @@ pub struct Game {
 }
 
 impl Game {
-    const CHESS_OFFSET: (i32, i32) = (4, 3);
+    const CHESS_OFFSET: (i32, i32) = (5, 3);
 
-    // rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1
+    // "l5t/1d3c1/r1p1w1e/7/7/7/E1W1P1R/1C3D1/T5L w - - 0 1"
     fn load_fen(&mut self, fen: &str) {
         let texture_creator = self.canvas.texture_creator();
         let mut pos = 0usize;
@@ -44,13 +50,14 @@ impl Game {
         while fen_idx < fen_u8.len() {
             let mut chess_id = EMPTY;
             match fen_u8[fen_idx] {
-                c @ b'k' | c @ b'K' => { chess_id = get_chess_id(get_role(c), KING);    }
-                c @ b'a' | c @ b'A' => { chess_id = get_chess_id(get_role(c), ADVISOR); }
-                c @ b'b' | c @ b'B' => { chess_id = get_chess_id(get_role(c), BISHOP);  }
-                c @ b'n' | c @ b'N' => { chess_id = get_chess_id(get_role(c), KNIGHT);  }
-                c @ b'r' | c @ b'R' => { chess_id = get_chess_id(get_role(c), ROOK);    }
-                c @ b'c' | c @ b'C' => { chess_id = get_chess_id(get_role(c), CANNON);  }
-                c @ b'p' | c @ b'P' => { chess_id = get_chess_id(get_role(c), PAWN);    }
+                c @ b'e' | c @ b'E' => { chess_id = get_chess_id(get_role(c), ELEPHANT); }
+                c @ b'l' | c @ b'L' => { chess_id = get_chess_id(get_role(c), LION);     }
+                c @ b't' | c @ b'T' => { chess_id = get_chess_id(get_role(c), TIGER);    }
+                c @ b'p' | c @ b'P' => { chess_id = get_chess_id(get_role(c), PANTHER);  }
+                c @ b'w' | c @ b'W' => { chess_id = get_chess_id(get_role(c), WOLF);     }
+                c @ b'd' | c @ b'D' => { chess_id = get_chess_id(get_role(c), DOG);      }
+                c @ b'c' | c @ b'C' => { chess_id = get_chess_id(get_role(c), CAT);      }
+                c @ b'r' | c @ b'R' => { chess_id = get_chess_id(get_role(c), RAT);      }
                 n @ b'1' ..= b'9'   => { pos += (n - b'0') as usize; }
                 b'/' => { }
                 b' ' => { break; }
@@ -81,38 +88,29 @@ impl Game {
                 array![Box::new(Chess::new(EMPTY, &texture_creator)); COL_NUM];
             ROW_NUM],
             role: RED,
-            board: texture_creator.load_texture("assets/board.jpg").unwrap(),
+            board: texture_creator.load_texture("assets/board.png").unwrap(),
             selected_frame: texture_creator.load_texture("assets/oos.gif").unwrap(),
-            board_size: (0, 0),
-            chess_size: (0, 0),
             selected_chess: None,
             movable_pos: LinkedList::new(),
             canvas,
             event_pump,
         };
 
-        game.load_fen("rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1");
-
-        {
-            let query = game.board.query();
-            game.board_size = (query.width, query.height);
-            let query = game.chesses[0][0].texture.query();
-            game.chess_size = (query.width, query.height);
-        }
+        game.load_fen("l5t/1d3c1/r1p1w1e/7/7/7/E1W1P1R/1C3D1/T5L w - - 0 1");
 
         game.canvas.set_logical_size(
-            game.board_size.0,
-            game.board_size.1,
+            BOARD_WIDTH,
+            BOARD_HEIGHT,
         ).expect("set logical_size failed");
         game
     }
 
     fn get_dst_rect(&self, row: usize, col: usize) -> Rect {
         Rect::new(
-            col as i32 * self.chess_size.0 as i32 + Self::CHESS_OFFSET.0,
-            row as i32 * self.chess_size.1 as i32 + Self::CHESS_OFFSET.1,
-            self.chess_size.0,
-            self.chess_size.1
+            col as i32 * CELL_WIDTH as i32 + (CELL_WIDTH - CHESS_WIDTH) as i32 / 2 + Self::CHESS_OFFSET.0,
+            row as i32 * CELL_HEIGHT as i32 + (CELL_HEIGHT - CHESS_HEIGHT) as i32 / 2 + Self::CHESS_OFFSET.1,
+            CHESS_WIDTH,
+            CHESS_HEIGHT,
         )
     }
 
@@ -215,8 +213,8 @@ impl Game {
         pos.1 -= Self::CHESS_OFFSET.1;
         if pos.0 < 0 || pos.1 < 0 { return None; }
 
-        let row = (pos.1 / self.chess_size.1 as i32) as usize;
-        let col = (pos.0 / self.chess_size.0 as i32) as usize;
+        let row = (pos.1 / CELL_HEIGHT as i32) as usize;
+        let col = (pos.0 / CELL_WIDTH as i32) as usize;
 
         Some((row, col))
     }
