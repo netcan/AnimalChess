@@ -20,6 +20,9 @@ const CELL_HEIGHT: u32 = 70;
 const CHESS_WIDTH: u32 = 64;
 const CHESS_HEIGHT: u32 = 64;
 
+const RED_DEN:   (usize, usize) = (8, 3);
+const BLACK_DEN: (usize, usize) = (0, 3);
+
 pub struct Game {
     chesses: [[Box<Chess>; COL_NUM]; ROW_NUM],
     role: Role, // 轮到谁下
@@ -162,7 +165,12 @@ impl Game {
     }
 
     fn check_movable(&self, src: &(usize, usize), dst: &(usize, usize)) -> bool {
-        let (src_chess, dst_chess) = self.get_src_dst_chess(&src, &dst);
+        match (get_chess_role(self.chesses[src.0][src.1].id), dst) {
+            (RED, &RED_DEN) | (BLACK, &BLACK_DEN) => return false,
+            _ => {}
+        }
+
+        let (src_chess, dst_chess) = self.get_src_dst_chess(src, dst);
         if dst_chess == EMPTY { return true; }
         if get_chess_role(src_chess) == get_chess_role(dst_chess) { return false; }
 
@@ -173,7 +181,7 @@ impl Game {
         match (src_chess_type, dst_chess_type) {
             (RAT, ELEPHANT) => ! Self::check_in_water(src),
             (ELEPHANT, RAT) => false,
-            (src, dst) => src <= dst
+            (s, d)          => s <= d || self.check_in_traps(&dst)
         }
     }
 
@@ -185,13 +193,13 @@ impl Game {
     fn check_rat(&self, src: &(usize, usize), dst: &(usize, usize)) -> bool {
         if src.0 == dst.0 {
             for j in src.1.min(dst.1) ..= src.1.max(dst.1) {
-                if get_chess_type(self.chesses[src.0][j].id) == RAT {
+                if get_chess_type(self.chesses[src.0][j].id) == RAT && Self::check_in_water(&(src.0, j)) {
                     return true;
                 }
             }
         } else {
             for i in src.0.min(dst.0) ..= src.0.max(dst.0) {
-                if get_chess_type(self.chesses[i][dst.1].id) == RAT {
+                if get_chess_type(self.chesses[i][src.1].id) == RAT && Self::check_in_water(&(i, src.1)) {
                     return true;
                 }
             }
@@ -199,7 +207,7 @@ impl Game {
         false
     }
 
-    fn check_at_bank(src: &(usize, usize)) -> bool {
+    fn check_at_bank(pos: &(usize, usize)) -> bool {
         const BANK: [[bool; COL_NUM]; ROW_NUM] = [
             [false, false, false, false, false, false, false],
             [false, false, false, false, false, false, false],
@@ -211,7 +219,31 @@ impl Game {
             [false, false, false, false, false, false, false],
             [false, false, false, false, false, false, false],
         ];
-        BANK[src.0][src.1]
+        BANK[pos.0][pos.1]
+    }
+
+    fn check_in_traps(&self, pos: &(usize, usize)) -> bool {
+        const TRAP: [[bool; COL_NUM]; ROW_NUM] = [
+            [false, false, true,  false, true,  false, false],
+            [false, false, false, true,  false, false, false],
+            [false, false, false, false, false, false, false],
+            [false, false, false, false, false, false, false],
+            [false, false, false, false, false, false, false],
+            [false, false, false, false, false, false, false],
+            [false, false, false, false, false, false, false],
+            [false, false, false, true,  false, false, false],
+            [false, false, true,  false, true,  false, false],
+        ];
+
+        if TRAP[pos.0][pos.1] {
+            if get_chess_role(self.chesses[pos.0][pos.1].id) == RED {
+                return pos.0 <= 1;
+            } else {
+                return pos.0 >= 7;
+            }
+        }
+
+        false
     }
 
     fn generate_tl_steps(&self, src: &(usize, usize)) -> LinkedList<(usize, usize)> {
@@ -241,15 +273,15 @@ impl Game {
         let mut result = LinkedList::new();
         for i in 0..4 {
             let (xx, yy) = (x + DX[i], y + DY[i]);
-            if xx >= 0 && xx < ROW_NUM as i32
-                && yy >= 0 && yy < COL_NUM as i32 {
-                    let dst = (xx as usize, yy as usize);
-                    println!("{:?}", dst);
-                    if Self::check_movable(self, src, &dst) {
-                        if ! Self::check_in_water(&dst) || to_water {
-                            result.push_back(dst)
-                        }
-                    }
+            if xx < 0 || xx >= ROW_NUM as i32 ||
+                yy < 0 || yy >= COL_NUM as i32 {
+                    continue;
+            }
+            let dst = (xx as usize, yy as usize);
+            if self.check_movable(src, &dst) {
+                if ! Self::check_in_water(&dst) || to_water {
+                    result.push_back(dst)
+                }
             }
         }
         result
