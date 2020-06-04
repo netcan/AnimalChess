@@ -186,8 +186,7 @@ impl Game {
     }
 
     fn check_in_water(src: &(usize, usize)) -> bool {
-        src.0 >= 3 && src.0 <= 5 &&
-            src.1 % 3 != 0
+        src.0 >= 3 && src.0 <= 5 && src.1 % 3 != 0
     }
 
     fn check_rat(&self, src: &(usize, usize), dst: &(usize, usize)) -> bool {
@@ -207,35 +206,19 @@ impl Game {
         false
     }
 
+    fn pos_to_idx(pos: &(usize, usize)) -> usize {
+        pos.0 * COL_NUM + pos.1
+    }
+
     fn check_at_bank(pos: &(usize, usize)) -> bool {
-        const BANK: [[bool; COL_NUM]; ROW_NUM] = [
-            [false, false, false, false, false, false, false],
-            [false, false, false, false, false, false, false],
-            [false, true,  true,  false, true,  true,  false],
-            [true,  false, false, true,  false, false, true ],
-            [true,  false, false, true,  false, false, true ],
-            [true,  false, false, true,  false, false, true ],
-            [false, true,  true,  false, true,  true,  false],
-            [false, false, false, false, false, false, false],
-            [false, false, false, false, false, false, false],
-        ];
-        BANK[pos.0][pos.1]
+        const BANK: u64 = 0xda4c992d8000;
+        BANK & (1 << Self::pos_to_idx(pos)) > 0
     }
 
     fn check_in_traps(&self, pos: &(usize, usize)) -> bool {
-        const TRAP: [[bool; COL_NUM]; ROW_NUM] = [
-            [false, false, true,  false, true,  false, false],
-            [false, false, false, true,  false, false, false],
-            [false, false, false, false, false, false, false],
-            [false, false, false, false, false, false, false],
-            [false, false, false, false, false, false, false],
-            [false, false, false, false, false, false, false],
-            [false, false, false, false, false, false, false],
-            [false, false, false, true,  false, false, false],
-            [false, false, true,  false, true,  false, false],
-        ];
+        const TRAP: u64 = 0x1410000000000414;
 
-        if TRAP[pos.0][pos.1] {
+        if TRAP & (1 << Self::pos_to_idx(pos)) > 0 {
             if get_chess_role(self.chesses[pos.0][pos.1].id) == RED {
                 return pos.0 <= 1;
             } else {
