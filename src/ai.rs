@@ -1,15 +1,14 @@
-use std::collections::LinkedList;
+use std::time::{Duration, Instant};
 use crate::game::*;
 use crate::chess::*;
 
-type ScoreType = i32;
 const MAX_DEPTH: i32 = 100;
 const INF: ScoreType = 1000000;
 const WIN_SCORE: ScoreType = INF - MAX_DEPTH;
 
 impl Game {
-    fn generate_all_steps(&self) -> LinkedList<MOVE> {
-        let mut moves = LinkedList::new();
+    fn generate_all_steps(&mut self) -> Vec<MOVE> {
+        let mut moves = Vec::new();
         for i in 0..ROW_NUM {
             for j in 0..COL_NUM {
                 let chess_id = self.chesses[i][j].id;
@@ -21,6 +20,12 @@ impl Game {
                 );
             }
         }
+        moves.sort_by(|lhs, rhs| {
+            let lhs_his_score = *self.get_history_score(lhs);
+            let rhs_his_score = *self.get_history_score(rhs);
+
+            (rhs_his_score).cmp(&lhs_his_score)
+        });
 
         moves
     }
@@ -62,9 +67,30 @@ impl Game {
         else { -score }
     }
 
-    fn alpha_beta(&mut self, cur_depth: i32, depth: i32, mut alpha: ScoreType, beta: ScoreType) -> ScoreType {
-        if self.check_win() != EMPTY { return cur_depth - INF; }
+    fn get_chess_idx(chess_id: ChessId) -> usize {
+        let mut chess_idx = get_chess_type(chess_id);
+        if get_chess_role(chess_id) == BLACK {
+            chess_idx += 8;
+        }
+        chess_idx as usize
+    }
 
+    fn get_history_score(&mut self, mv: &MOVE) -> &mut ScoreType {
+        let (src, dst) = mv;
+        &mut self.history_table[
+            Self::get_chess_idx(self.chesses[src.0][src.1].id)
+        ][dst.0][dst.1]
+    }
+
+    fn store_best_move(&mut self, mv: &MOVE, depth: i32) {
+        *self.get_history_score(mv) += depth * depth;
+    }
+
+    fn alpha_beta(&mut self,
+        cur_depth: i32, depth: i32,
+        mut alpha: ScoreType, beta: ScoreType) -> ScoreType {
+
+        if self.check_win() != EMPTY { return cur_depth - INF; }
         if cur_depth == depth { return self.evaluate(); }
 
         // 超出边界的alph-beta搜索
@@ -87,18 +113,36 @@ impl Game {
 
         }
 
-        if cur_depth == 0 {
-            if let Some(mv) = best_move {
-                self.move_chess(&mv)
-            }
+        if let Some(mv) = best_move {
+            self.compture_mv = Some(mv);
+            self.store_best_move(&mv, depth - cur_depth);
         }
         best_score
     }
 
     pub fn search_main(&mut self) {
-        if self.compture_turn {
-            self.alpha_beta(0, 3, -INF, INF);
+        if ! self.compture_turn { return; }
+
+        // clean up
+        self.history_table = [[[0; COL_NUM]; ROW_NUM]; 16];
+        self.compture_mv = None;
+
+        println!("search init board score = {}", self.evaluate());
+        let timeout: i32 = 200 * 1000; // 200 ms
+        let now = Instant::now();
+
+        for d in 1..=MAX_DEPTH {
+            if now.elapsed().as_micros() as i32 >= timeout { break; }
+            let score = self.alpha_beta(0, d, -INF, INF);
+            println!("depth = {} find best score = {}", d, score);
+            if score >= WIN_SCORE || score <= -WIN_SCORE { break; }
         }
+
+        if let Some(mv) = self.compture_mv {
+            println!("compture move: {:?} -> {:?}", mv.0, mv.1);
+            self.move_chess(&mv);
+        }
+
     }
 
 

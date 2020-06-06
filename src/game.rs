@@ -25,6 +25,8 @@ const BLACK_DEN: (usize, usize) = (0, 3);
 
 pub type POS = (usize, usize);
 pub type MOVE = (POS, POS);
+pub type ScoreType = i32;
+type HisTblType = [[[ScoreType; COL_NUM]; ROW_NUM]; 16];
 
 struct Context {
     eated: Box<Chess>,
@@ -47,7 +49,9 @@ pub struct Game {
     selected_frame: Texture,
     movable_pos: LinkedList<POS>,
     pub compture_turn: bool,
+    pub compture_mv: Option<MOVE>,
     ctx: VecDeque<Context>,
+    pub history_table: HisTblType,
 }
 
 impl Game {
@@ -111,8 +115,10 @@ impl Game {
             selected_frame: texture_creator.load_texture("assets/oos.gif").unwrap(),
             selected_chess: None,
             movable_pos: LinkedList::new(),
-            compture_turn: true,
+            compture_turn: false,
+            compture_mv: None,
             ctx: VecDeque::new(),
+            history_table: [[[0; COL_NUM]; ROW_NUM]; 16],
             canvas,
             event_pump,
         };
@@ -316,7 +322,7 @@ impl Game {
     fn switch_player(&mut self) {
         self.role = if self.role == RED { BLACK }
                     else { RED };
-        // self.compture_turn = ! self.compture_turn;
+        self.compture_turn = ! self.compture_turn;
     }
 
     pub fn move_chess(&mut self, mv: &MOVE) {
@@ -427,7 +433,7 @@ impl Game {
                 self.process_click(click_pos);
                 self.search_main();
             } else {
-                println!("{} wins!", if win_status == RED { "red" } else { "BLACK" });
+                println!("{} wins!", if win_status == RED { "RED" } else { "BLACK" });
             }
 
             // update
