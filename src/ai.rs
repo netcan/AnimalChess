@@ -14,10 +14,10 @@ impl Game {
             for j in 0..COL_NUM {
                 let chess_id = self.chesses[i][j];
                 if get_chess_role(chess_id) != self.role { continue }
-                moves.extend(self.generate_steps(&(i, j)));
+                moves.extend(self.generate_steps(to_pos(&(i, j))));
             }
         }
-        moves.sort_by(|lhs, rhs| {
+        moves.sort_by(|&lhs, &rhs| {
             let lhs_his_score = *self.get_history_score(lhs);
             let rhs_his_score = *self.get_history_score(rhs);
 
@@ -64,14 +64,14 @@ impl Game {
         else { -score }
     }
 
-    fn get_history_score(&mut self, mv: &MOVE) -> &mut ScoreType {
-        let (src, dst) = mv;
+    fn get_history_score(&mut self, mv: MOVE) -> &mut ScoreType {
+        let (src, dst) = get_move(mv);
         &mut self.history_table[
             get_chess_idx(self.chesses[src.0][src.1])
         ][dst.0][dst.1]
     }
 
-    fn store_best_move(&mut self, mv: &MOVE, depth: i32) {
+    fn store_best_move(&mut self, mv: MOVE, depth: i32) {
         *self.get_history_score(mv) += depth * depth;
     }
 
@@ -87,7 +87,7 @@ impl Game {
         let mut best_move: Option<MOVE> = None;
 
         for mv in self.generate_all_steps() {
-            self.move_chess(&mv);
+            self.move_chess(mv);
             let score = -self.alpha_beta(cur_depth + 1, depth, -beta, -alpha);
             self.undo_move();
 
@@ -104,7 +104,7 @@ impl Game {
 
         if let Some(mv) = best_move {
             self.compture_mv = Some(mv);
-            self.store_best_move(&mv, depth - cur_depth);
+            self.store_best_move(mv, depth - cur_depth);
         }
         best_score
     }
@@ -129,7 +129,7 @@ impl Game {
 
         if let Some(mv) = self.compture_mv {
             // println!("compture move: {:?} -> {:?}", mv.0, mv.1);
-            self.move_chess(&mv);
+            self.move_chess(mv);
         }
 
     }
