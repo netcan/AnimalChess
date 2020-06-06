@@ -31,41 +31,33 @@ pub fn get_chess_type(id: ChessId) -> ChessType {
     return id & 0x7;
 }
 
-pub struct Chess {
-    pub id: ChessId,
-    pub texture: Texture,
+pub fn get_chess_idx(chess_id: ChessId) -> usize {
+    (chess_id - 8) as usize
 }
 
-impl Chess {
-    fn get_chess_texture<T>(chess_id: ChessId, texture_creator: &TextureCreator<T>) -> Texture {
-        let mut path = String::from("assets/");
-        match chess_id {
-            EMPTY => { path.push_str("oo.gif"); }
-            id => {
-                match get_chess_role(id) {
-                    RED   => { path.push('r'); }
-                    BLACK => { path.push('b'); }
-                    _     => unreachable!()
-                }
+pub fn get_chess_texture<T>(chess_id: ChessId, texture_creator: &TextureCreator<T>) -> Texture {
+    let mut path = String::from("assets/");
+    match chess_id {
+        EMPTY => { path.push_str("oo.gif"); }
+        id => {
+            match get_chess_role(id) {
+                RED   => { path.push('r'); }
+                BLACK => { path.push('b'); }
+                _     => unreachable!()
+            }
 
-                match get_chess_type(id) {
-                    ELEPHANT => { path.push_str("e.png"); }
-                    LION     => { path.push_str("l.png"); }
-                    TIGER    => { path.push_str("t.png"); }
-                    PANTHER  => { path.push_str("p.png"); }
-                    WOLF     => { path.push_str("w.png"); }
-                    DOG      => { path.push_str("d.png"); }
-                    CAT      => { path.push_str("c.png"); }
-                    RAT      => { path.push_str("r.png"); }
-                    _       => unreachable!()
-                }
+            match get_chess_type(id) {
+                ELEPHANT => { path.push_str("e.png"); }
+                LION     => { path.push_str("l.png"); }
+                TIGER    => { path.push_str("t.png"); }
+                PANTHER  => { path.push_str("p.png"); }
+                WOLF     => { path.push_str("w.png"); }
+                DOG      => { path.push_str("d.png"); }
+                CAT      => { path.push_str("c.png"); }
+                RAT      => { path.push_str("r.png"); }
+                _       => unreachable!()
             }
         }
-
-        texture_creator.load_texture(path).expect("load texture failed")
     }
-
-    pub fn new<T>(id: ChessId, texture_creator: &TextureCreator<T>) -> Self {
-        Self { id, texture: Self::get_chess_texture(id, texture_creator) }
-    }
+    texture_creator.load_texture(path).expect("load texture failed")
 }

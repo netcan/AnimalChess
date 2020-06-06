@@ -11,7 +11,7 @@ impl Game {
         let mut moves = Vec::new();
         for i in 0..ROW_NUM {
             for j in 0..COL_NUM {
-                let chess_id = self.chesses[i][j].id;
+                let chess_id = self.chesses[i][j];
                 if get_chess_role(chess_id) != self.role { continue }
                 moves.extend(
                     self.generate_steps(&(i, j)).into_iter().map(|pos| {
@@ -49,7 +49,7 @@ impl Game {
         let mut score: ScoreType = 0;
         for i in 0..ROW_NUM {
             for j in 0..COL_NUM {
-                let chess_id = self.chesses[i][j].id;
+                let chess_id = self.chesses[i][j];
                 if chess_id == EMPTY { continue; }
 
                 let chess_score = CHESS_SCORE[get_chess_type(chess_id) as usize];
@@ -67,18 +67,10 @@ impl Game {
         else { -score }
     }
 
-    fn get_chess_idx(chess_id: ChessId) -> usize {
-        let mut chess_idx = get_chess_type(chess_id);
-        if get_chess_role(chess_id) == BLACK {
-            chess_idx += 8;
-        }
-        chess_idx as usize
-    }
-
     fn get_history_score(&mut self, mv: &MOVE) -> &mut ScoreType {
         let (src, dst) = mv;
         &mut self.history_table[
-            Self::get_chess_idx(self.chesses[src.0][src.1].id)
+            get_chess_idx(self.chesses[src.0][src.1])
         ][dst.0][dst.1]
     }
 

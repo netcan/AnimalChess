@@ -2,4 +2,7 @@
 .DS_Store
 Thumbs.db
 *_
+flamegraph.svg
+out.user_stacks
+stacks.folded
 **/*.rs.bk
