@@ -9,15 +9,12 @@ const WIN_SCORE: ScoreType = INF - MAX_DEPTH;
 impl Game {
     fn generate_all_steps(&mut self) -> Vec<MOVE> {
         let mut moves = Vec::new();
+        moves.reserve(32);
         for i in 0..ROW_NUM {
             for j in 0..COL_NUM {
                 let chess_id = self.chesses[i][j];
                 if get_chess_role(chess_id) != self.role { continue }
-                moves.extend(
-                    self.generate_steps(&(i, j)).into_iter().map(|pos| {
-                        ((i, j), pos)
-                    })
-                );
+                moves.extend(self.generate_steps(&(i, j)));
             }
         }
         moves.sort_by(|lhs, rhs| {
@@ -119,19 +116,19 @@ impl Game {
         self.history_table = [[[0; COL_NUM]; ROW_NUM]; 16];
         self.compture_mv = None;
 
-        println!("search init board score = {}", self.evaluate());
+        // println!("search init board score = {}", self.evaluate());
         let timeout: i32 = 200 * 1000; // 200 ms
         let now = Instant::now();
 
         for d in 1..=MAX_DEPTH {
             if now.elapsed().as_micros() as i32 >= timeout { break; }
             let score = self.alpha_beta(0, d, -INF, INF);
-            println!("depth = {} find best score = {}", d, score);
+            // println!("depth = {} find best score = {}", d, score);
             if score >= WIN_SCORE || score <= -WIN_SCORE { break; }
         }
 
         if let Some(mv) = self.compture_mv {
-            println!("compture move: {:?} -> {:?}", mv.0, mv.1);
+            // println!("compture move: {:?} -> {:?}", mv.0, mv.1);
             self.move_chess(&mv);
         }
 

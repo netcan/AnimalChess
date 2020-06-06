@@ -9,6 +9,10 @@ use std::time::Duration;
 use std::collections::{LinkedList, VecDeque};
 use crate::chess::*;
 
+pub type POS = (usize, usize);
+pub type MOVE = (POS, POS);
+pub type ScoreType = i32;
+
 pub const ROW_NUM: usize = 9;
 pub const COL_NUM: usize = 7;
 
@@ -20,12 +24,9 @@ const CELL_HEIGHT: u32 = 70;
 const CHESS_WIDTH: u32 = 64;
 const CHESS_HEIGHT: u32 = 64;
 
-const RED_DEN:   (usize, usize) = (8, 3);
-const BLACK_DEN: (usize, usize) = (0, 3);
+const RED_DEN:   POS = (8, 3);
+const BLACK_DEN: POS = (0, 3);
 
-pub type POS = (usize, usize);
-pub type MOVE = (POS, POS);
-pub type ScoreType = i32;
 type HisTblType = [[[ScoreType; COL_NUM]; ROW_NUM]; 16];
 
 struct Context {
@@ -48,7 +49,7 @@ pub struct Game {
     event_pump: EventPump,
     selected_chess: Option<POS>,
     selected_frame: Texture,
-    movable_pos: LinkedList<POS>,
+    movable_pos: Vec<MOVE>,
     pub compture_turn: bool,
     pub compture_mv: Option<MOVE>,
     ctx: VecDeque<Context>,
@@ -60,9 +61,6 @@ impl Game {
 
     // "l5t/1d3c1/r1p1w1e/7/7/7/E1W1P1R/1C3D1/T5L w - - 0 1"
     fn load_fen(&mut self, fen: &str) {
-        let texture_creator = self.canvas.texture_creator();
-        let mut pos = 0usize;
-
         let fen_u8 = fen.as_bytes();
         let mut fen_idx = 0;
 
@@ -71,6 +69,7 @@ impl Game {
             else { RED }
         };
 
+        let mut pos = 0usize;
         while fen_idx < fen_u8.len() {
             let mut chess_id = EMPTY;
             match fen_u8[fen_idx] {
@@ -114,7 +113,7 @@ impl Game {
             board: texture_creator.load_texture("assets/board.png").unwrap(),
             selected_frame: texture_creator.load_texture("assets/oos.gif").unwrap(),
             selected_chess: None,
-            movable_pos: LinkedList::new(),
+            movable_pos: Vec::new(),
             compture_turn: true,
             compture_mv: None,
             ctx: VecDeque::new(),
@@ -145,7 +144,7 @@ impl Game {
         )
     }
 
-    fn draw_frame(&mut self, tgt_pos: &LinkedList<POS>) -> Result<(), String> {
+    fn draw_frame(&mut self, tgt_pos: &Vec<POS>) -> Result<(), String> {
         for pos in tgt_pos {
             self.canvas.copy(&self.selected_frame, None, self.get_dst_rect(pos.0, pos.1))?;
         }
@@ -154,12 +153,12 @@ impl Game {
 
     fn process_selected_chess(&mut self) -> Result<(), String> {
         if let Some(pos) = self.selected_chess {
-            let mut tgt_pos = LinkedList::new();
-            tgt_pos.push_back(pos);
+            let mut tgt_pos = Vec::new();
+            tgt_pos.push(pos);
             self.draw_frame(&tgt_pos)?;
 
             let movable_pos = self.generate_steps(&pos);
-            self.draw_frame(&movable_pos)?;
+            self.draw_frame(&movable_pos.iter().map(|&(_, dst)| { dst }).collect::<Vec<POS>>())?;
             self.movable_pos = movable_pos;
         }
         Ok(())
@@ -214,7 +213,7 @@ impl Game {
         src.0 >= 3 && src.0 <= 5 && src.1 % 3 != 0
     }
 
-    fn check_rat(&self, src: &(usize, usize), dst: &(usize, usize)) -> bool {
+    fn check_rat(&self, src: &POS, dst: &POS) -> bool {
         if src.0 == dst.0 {
             for j in src.1.min(dst.1) ..= src.1.max(dst.1) {
                 if get_chess_type(self.chesses[src.0][j]) == RAT && Self::check_in_water(&(src.0, j)) {
@@ -231,23 +230,23 @@ impl Game {
         false
     }
 
-    fn pos_to_idx(pos: &(usize, usize)) -> usize {
+    fn pos_to_idx(pos: &POS) -> usize {
         pos.0 * COL_NUM + pos.1
     }
 
-    fn check_at_bank(pos: &(usize, usize)) -> bool {
+    fn check_at_bank(pos: &POS) -> bool {
         const BANK: u64 = 0xda4c992d8000;
         BANK & (1 << Self::pos_to_idx(pos)) > 0
     }
 
-    pub fn check_in_den(&self, pos: &(usize, usize)) -> bool {
+    pub fn check_in_den(&self, pos: &POS) -> bool {
         match (get_chess_role(self.chesses[pos.0][pos.1]), pos) {
             (RED, &BLACK_DEN) | (BLACK, &RED_DEN) => return true,
             _ => { return false }
         }
     }
 
-    pub fn check_in_traps(&self, pos: &(usize, usize)) -> bool {
+    pub fn check_in_traps(&self, pos: &POS) -> bool {
         const TRAP: u64 = 0x1410000000000414;
 
         if TRAP & (1 << Self::pos_to_idx(pos)) > 0 {
@@ -261,31 +260,32 @@ impl Game {
         false
     }
 
-    fn generate_tl_steps(&self, src: &(usize, usize)) -> LinkedList<(usize, usize)> {
+    fn generate_tl_steps(&self, src: &POS) -> Vec<MOVE> {
         let mut basic_steps = self.generate_basic_steps(src, false);
         if Self::check_at_bank(src) {
             // [2, 6]
             if (src.0 + 2) % 4 == 0 {
-                basic_steps.push_back(((src.0 + 4) % 8, src.1));
+                basic_steps.push((*src, ((src.0 + 4) % 8, src.1)));
             } else {
                 if src.1 % 6 == 0 {
-                    basic_steps.push_back((src.0, 3));
+                    basic_steps.push((*src, (src.0, 3)));
                 } else {
-                    basic_steps.push_back((src.0, 0));
-                    basic_steps.push_back((src.0, 6));
+                    basic_steps.push((*src, (src.0, 0)));
+                    basic_steps.push((*src, (src.0, 6)));
                 }
             }
         }
-        basic_steps.into_iter().filter(|dst| {
+        basic_steps.into_iter().filter(|(_, dst)| {
             self.check_movable(src, dst) && !self.check_rat(src, dst)
         }).collect()
     }
 
-    fn generate_basic_steps(&self, src: &(usize, usize), to_water: bool) -> LinkedList<(usize, usize)> {
+    fn generate_basic_steps(&self, src: &POS, to_water: bool) -> Vec<MOVE> {
         const DX: [i32; 4] = [1, 0, -1, 0];
         const DY: [i32; 4] = [0, 1, 0, -1];
         let (x, y) = (src.0 as i32, src.1 as i32);
-        let mut result = LinkedList::new();
+        let mut result = Vec::new();
+        result.reserve(8);
         for i in 0..4 {
             let (xx, yy) = (x + DX[i], y + DY[i]);
             if xx < 0 || xx >= ROW_NUM as i32 ||
@@ -295,14 +295,14 @@ impl Game {
             let dst = (xx as usize, yy as usize);
             if self.check_movable(src, &dst) {
                 if ! Self::check_in_water(&dst) || to_water {
-                    result.push_back(dst)
+                    result.push((*src, dst))
                 }
             }
         }
         result
     }
 
-    pub fn generate_steps(&self, pos: &(usize, usize)) -> LinkedList<(usize, usize)> {
+    pub fn generate_steps(&self, pos: &POS) -> Vec<MOVE> {
         match get_chess_type(self.chesses[pos.0][pos.1]) {
             RAT =>          { self.generate_basic_steps(&(pos.0, pos.1), true)  }
             TIGER | LION => { self.generate_tl_steps(&(pos.0, pos.1))           }
@@ -310,12 +310,7 @@ impl Game {
         }
     }
 
-    // fn get_empty_chess(&self) -> Box<Chess> {
-        // let texture_creator = self.canvas.texture_creator();
-        // Box::new(Chess::new(EMPTY, &texture_creator))
-    // }
-
-    fn get_click_rect(&self, mut pos: (i32, i32)) -> Option<(usize, usize)> {
+    fn get_click_rect(&self, mut pos: (i32, i32)) -> Option<POS> {
         pos.0 -= Self::CHESS_OFFSET.0;
         pos.1 -= Self::CHESS_OFFSET.1;
         if pos.0 < 0 || pos.1 < 0 { return None; }
@@ -358,7 +353,7 @@ impl Game {
         if let Some(dst) = self.get_click_rect(pos) {
             if get_chess_role(self.chesses[dst.0][dst.1]) != self.role {
                 // may be move
-                if let Some(_) = self.movable_pos.iter().find(|&&p| { return p == dst }) {
+                if let Some(_) = self.movable_pos.iter().find(|&&(_, d)| { return d == dst }) {
                     let src = self.selected_chess.unwrap();
                     self.move_chess(&(src, dst));
                 }
