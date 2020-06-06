@@ -3,6 +3,7 @@ extern crate array_macro;
 
 mod game;
 mod chess;
+mod ai;
 
 use game::*;
 

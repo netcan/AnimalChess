@@ -46,6 +46,8 @@ pub struct Game {
     selected_chess: Option<POS>,
     selected_frame: Texture,
     movable_pos: LinkedList<POS>,
+    pub compture_turn: bool,
+    pub step: u16,
     ctx: VecDeque<Context>,
 }
 
@@ -110,6 +112,8 @@ impl Game {
             selected_frame: texture_creator.load_texture("assets/oos.gif").unwrap(),
             selected_chess: None,
             movable_pos: LinkedList::new(),
+            compture_turn: false,
+            step: 0,
             ctx: VecDeque::new(),
             canvas,
             event_pump,
@@ -309,7 +313,7 @@ impl Game {
                     else { RED }
     }
 
-    fn move_chess(&mut self, mv: &MOVE) {
+    pub fn move_chess(&mut self, mv: &MOVE) {
         let (src, dst) = mv;
         let mut eated = self.get_empty_chess();
 
@@ -323,10 +327,11 @@ impl Game {
         }
 
         self.ctx.push_back(Context::new(eated, mv));
+        self.step += 1;
         self.switch_player()
     }
 
-    fn undo_move(&mut self) {
+    pub fn undo_move(&mut self) {
         if let Some(mut context) = self.ctx.pop_back() {
             let p_eated = &mut context.eated;
 
@@ -339,6 +344,7 @@ impl Game {
                 std::mem::swap(&mut *p_dst, &mut *p_eated);
             }
 
+            self.step -= 1;
             self.switch_player()
         }
     }
@@ -350,9 +356,10 @@ impl Game {
                 if let Some(_) = self.movable_pos.iter().find(|&&p| { return p == dst }) {
                     let src = self.selected_chess.unwrap();
                     self.move_chess(&(src, dst));
+                    self.compture_turn = true; // turn by compture
                 }
                 self.selected_chess = None;
-            } else {
+            } else { // must be selected, because role is same as chess
                 println!("selected_chess: {:?}", dst);
                 self.selected_chess = Some(dst);
                 return;
@@ -386,6 +393,8 @@ impl Game {
             if undo { self.undo_move() }
 
             self.process_click(click_pos);
+
+            self.search_main();
 
             // update
             self.render()?;
