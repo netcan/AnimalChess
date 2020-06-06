@@ -29,7 +29,7 @@ impl Game {
 
     fn evaluate(&self) -> ScoreType {
         const CHESS_SCORE: [ScoreType; 8] = [
-            100, 90, 80, 70, 60, 50, 40, 30
+            1000, 900, 800, 700, 600, 500, 400, 300
         ];
         const POS_SCORE: [[ScoreType; COL_NUM]; ROW_NUM] = [
             [0, 0, 0, 0, 0, 0, 0],
@@ -117,15 +117,20 @@ impl Game {
         self.compture_mv = None;
 
         // println!("search init board score = {}", self.evaluate());
-        let timeout: i32 = 200 * 1000; // 200 ms
+        let timeout: i32 = 500 * 1000; // 200 ms
         let now = Instant::now();
 
+        let mut max_depth = 0;
+        let mut best_score = 0;
         for d in 1..=MAX_DEPTH {
             if now.elapsed().as_micros() as i32 >= timeout { break; }
             let score = self.alpha_beta(0, d, -INF, INF);
-            // println!("depth = {} find best score = {}", d, score);
+            best_score = best_score.max(score);
+            max_depth = d;
             if score >= WIN_SCORE || score <= -WIN_SCORE { break; }
         }
+
+        // println!("max_depth = {} find best score = {}", max_depth, best_score);
 
         if let Some(mv) = self.compture_mv {
             // println!("compture move: {:?} -> {:?}", mv.0, mv.1);

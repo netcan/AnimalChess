@@ -138,7 +138,7 @@ impl Game {
             selected_frame: texture_creator.load_texture("assets/oos.gif").unwrap(),
             selected_chess: None,
             movable_pos: Vec::new(),
-            compture_turn: true,
+            compture_turn: false,
             compture_mv: None,
             ctx: VecDeque::new(),
             history_table: [[[0; COL_NUM]; ROW_NUM]; 16],
@@ -362,7 +362,7 @@ impl Game {
     fn switch_player(&mut self) {
         self.role = if self.role == RED { BLACK }
                     else { RED };
-        // self.compture_turn = ! self.compture_turn;
+        self.compture_turn = ! self.compture_turn;
     }
 
     pub fn move_chess(&mut self, mv: MOVE) {
