@@ -6,11 +6,11 @@ use sdl2::keyboard::Keycode;
 use sdl2::EventPump;
 use sdl2::image::LoadTexture;
 use std::time::Duration;
-use std::collections::LinkedList;
+use std::collections::{LinkedList, VecDeque};
 use crate::chess::*;
 
-const ROW_NUM: usize = 9;
-const COL_NUM: usize = 7;
+pub const ROW_NUM: usize = 9;
+pub const COL_NUM: usize = 7;
 
 const BOARD_WIDTH: u32 = 500;
 const BOARD_HEIGHT: u32 = 636;
@@ -23,15 +23,30 @@ const CHESS_HEIGHT: u32 = 64;
 const RED_DEN:   (usize, usize) = (8, 3);
 const BLACK_DEN: (usize, usize) = (0, 3);
 
+pub type POS = (usize, usize);
+pub type MOVE = (POS, POS);
+
+struct Context {
+    eated: Box<Chess>,
+    mv: MOVE,
+}
+
+impl Context {
+    fn new(eated: Box<Chess>, mv: &MOVE) -> Self {
+        Self { eated, mv: *mv }
+    }
+}
+
 pub struct Game {
-    chesses: [[Box<Chess>; COL_NUM]; ROW_NUM],
-    role: Role, // 轮到谁下
+    pub chesses: [[Box<Chess>; COL_NUM]; ROW_NUM],
+    pub role: Role, // 轮到谁下
     board: Texture,
     canvas: WindowCanvas,
     event_pump: EventPump,
-    selected_chess: Option<(usize, usize)>,
+    selected_chess: Option<POS>,
     selected_frame: Texture,
-    movable_pos: LinkedList<(usize, usize)>,
+    movable_pos: LinkedList<POS>,
+    ctx: VecDeque<Context>,
 }
 
 impl Game {
@@ -95,6 +110,7 @@ impl Game {
             selected_frame: texture_creator.load_texture("assets/oos.gif").unwrap(),
             selected_chess: None,
             movable_pos: LinkedList::new(),
+            ctx: VecDeque::new(),
             canvas,
             event_pump,
         };
@@ -117,7 +133,7 @@ impl Game {
         )
     }
 
-    fn draw_frame(&mut self, tgt_pos: &LinkedList<(usize, usize)>) -> Result<(), String> {
+    fn draw_frame(&mut self, tgt_pos: &LinkedList<POS>) -> Result<(), String> {
         for pos in tgt_pos {
             self.canvas.copy(&self.selected_frame, None, self.get_dst_rect(pos.0, pos.1))?;
         }
@@ -125,18 +141,12 @@ impl Game {
     }
 
     fn process_selected_chess(&mut self) -> Result<(), String> {
-        if let Some((row, col)) = self.selected_chess {
+        if let Some(pos) = self.selected_chess {
             let mut tgt_pos = LinkedList::new();
-            tgt_pos.push_back((row, col));
-
-            let mut movable_pos = LinkedList::new();
-            match get_chess_type(self.chesses[row][col].id) {
-                RAT =>          { movable_pos = self.generate_basic_steps(&(row, col), true);  }
-                TIGER | LION => { movable_pos = self.generate_tl_steps(&(row, col));           }
-                _ =>            { movable_pos = self.generate_basic_steps(&(row, col), false); }
-            }
-
+            tgt_pos.push_back(pos);
             self.draw_frame(&tgt_pos)?;
+
+            let movable_pos = self.generate_steps(&pos);
             self.draw_frame(&movable_pos)?;
             self.movable_pos = movable_pos;
         }
@@ -159,12 +169,12 @@ impl Game {
         Ok(())
     }
 
-    fn get_src_dst_chess(&self, src: &(usize, usize), dst: &(usize, usize)) -> (ChessId, ChessId) {
+    fn get_src_dst_chess(&self, src: &POS, dst: &POS) -> (ChessId, ChessId) {
         (self.chesses[src.0][src.1].id,
          self.chesses[dst.0][dst.1].id)
     }
 
-    fn check_movable(&self, src: &(usize, usize), dst: &(usize, usize)) -> bool {
+    fn check_movable(&self, src: &POS, dst: &POS) -> bool {
         match (get_chess_role(self.chesses[src.0][src.1].id), dst) {
             (RED, &RED_DEN) | (BLACK, &BLACK_DEN) => return false,
             _ => {}
@@ -185,7 +195,7 @@ impl Game {
         }
     }
 
-    fn check_in_water(src: &(usize, usize)) -> bool {
+    fn check_in_water(src: &POS) -> bool {
         src.0 >= 3 && src.0 <= 5 && src.1 % 3 != 0
     }
 
@@ -270,6 +280,14 @@ impl Game {
         result
     }
 
+    pub fn generate_steps(&self, pos: &(usize, usize)) -> LinkedList<(usize, usize)> {
+        match get_chess_type(self.chesses[pos.0][pos.1].id) {
+            RAT =>          { self.generate_basic_steps(&(pos.0, pos.1), true)  }
+            TIGER | LION => { self.generate_tl_steps(&(pos.0, pos.1))           }
+            _ =>            { self.generate_basic_steps(&(pos.0, pos.1), false) }
+        }
+    }
+
     fn get_empty_chess(&self) -> Box<Chess> {
         let texture_creator = self.canvas.texture_creator();
         Box::new(Chess::new(EMPTY, &texture_creator))
@@ -291,28 +309,52 @@ impl Game {
                     else { RED }
     }
 
-    unsafe fn move_chess(&mut self, src: (usize, usize), dst: (usize, usize)) {
+    fn move_chess(&mut self, mv: &MOVE) {
+        let (src, dst) = mv;
+        let mut eated = self.get_empty_chess();
+
+        let p_eated = &mut eated;
         let p_src: *mut Box<Chess> = &mut self.chesses[src.0][src.1];
         let p_dst: *mut Box<Chess> = &mut self.chesses[dst.0][dst.1];
-        std::mem::swap(&mut *p_src, &mut *p_dst);
-        *p_src = self.get_empty_chess();
 
-        println!("{:?} -> {:?}", src, dst);
+        unsafe {
+            std::mem::swap(&mut *p_dst, &mut *p_eated);
+            std::mem::swap(&mut *p_src, &mut *p_dst);
+        }
+
+        self.ctx.push_back(Context::new(eated, mv));
         self.switch_player()
     }
 
+    fn undo_move(&mut self) {
+        if let Some(mut context) = self.ctx.pop_back() {
+            let p_eated = &mut context.eated;
+
+            let (src, dst) = context.mv;
+            let p_src: *mut Box<Chess> = &mut self.chesses[src.0][src.1];
+            let p_dst: *mut Box<Chess> = &mut self.chesses[dst.0][dst.1];
+
+            unsafe {
+                std::mem::swap(&mut *p_src, &mut *p_dst);
+                std::mem::swap(&mut *p_dst, &mut *p_eated);
+            }
+
+            self.switch_player()
+        }
+    }
+
     fn process_click(&mut self, pos: (i32, i32)) {
-        if let Some((row, col)) = self.get_click_rect(pos) {
-            if self.chesses[row][col].id == EMPTY || get_chess_role(self.chesses[row][col].id) != self.role {
+        if let Some(dst) = self.get_click_rect(pos) {
+            if get_chess_role(self.chesses[dst.0][dst.1].id) != self.role {
                 // may be move
-                if let Some(_) = self.movable_pos.iter().find(|&&(r, l)| { return (r, l) == (row, col) }) {
-                    let src_pos = self.selected_chess.unwrap();
-                    unsafe { self.move_chess(src_pos, (row, col)); }
+                if let Some(_) = self.movable_pos.iter().find(|&&p| { return p == dst }) {
+                    let src = self.selected_chess.unwrap();
+                    self.move_chess(&(src, dst));
                 }
                 self.selected_chess = None;
             } else {
-                println!("selected_chess: ({}, {})", row, col);
-                self.selected_chess = Some((row, col));
+                println!("selected_chess: {:?}", dst);
+                self.selected_chess = Some(dst);
                 return;
             }
 
@@ -324,13 +366,24 @@ impl Game {
         'running: loop {
             // handle event
             let mut click_pos = (0, 0);
+            let mut undo = false;
+
             for event in self.event_pump.poll_iter() {
                 match event {
-                    Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => { break 'running }
+                    Event::Quit {..} => { break 'running }
+                    Event::KeyDown { keycode: Some(keycode), .. } => {
+                        match keycode {
+                            Keycode::Escape => { break 'running }
+                            Keycode::U      => { undo = true; }
+                            _ => {}
+                        }
+                    }
                     Event::MouseButtonDown {x, y, ..} => { click_pos = (x, y); }
                     _ => {}
                 }
             }
+
+            if undo { self.undo_move() }
 
             self.process_click(click_pos);
 
