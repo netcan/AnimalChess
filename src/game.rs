@@ -310,7 +310,8 @@ impl Game {
 
     fn switch_player(&mut self) {
         self.role = if self.role == RED { BLACK }
-                    else { RED }
+                    else { RED };
+        self.compture_turn = ! self.compture_turn;
     }
 
     pub fn move_chess(&mut self, mv: &MOVE) {
@@ -390,7 +391,10 @@ impl Game {
                 }
             }
 
-            if undo { self.undo_move() }
+            if undo {
+                self.undo_move();
+                if self.compture_turn { self.undo_move(); }
+            }
 
             self.process_click(click_pos);
 

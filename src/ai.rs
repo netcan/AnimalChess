@@ -77,7 +77,6 @@ impl Game {
 
     pub fn search_main(&mut self) {
         if self.compture_turn {
-            self.compture_turn = false;
             self.alpha_beta(0, 1, -INF, INF);
         }
     }
