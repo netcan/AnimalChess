@@ -47,7 +47,6 @@ pub struct Game {
     selected_frame: Texture,
     movable_pos: LinkedList<POS>,
     pub compture_turn: bool,
-    pub step: u16,
     ctx: VecDeque<Context>,
 }
 
@@ -112,8 +111,7 @@ impl Game {
             selected_frame: texture_creator.load_texture("assets/oos.gif").unwrap(),
             selected_chess: None,
             movable_pos: LinkedList::new(),
-            compture_turn: false,
-            step: 0,
+            compture_turn: true,
             ctx: VecDeque::new(),
             canvas,
             event_pump,
@@ -229,7 +227,14 @@ impl Game {
         BANK & (1 << Self::pos_to_idx(pos)) > 0
     }
 
-    fn check_in_traps(&self, pos: &(usize, usize)) -> bool {
+    pub fn check_in_den(&self, pos: &(usize, usize)) -> bool {
+        match (get_chess_role(self.chesses[pos.0][pos.1].id), pos) {
+            (RED, &BLACK_DEN) | (BLACK, &RED_DEN) => return true,
+            _ => { return false }
+        }
+    }
+
+    pub fn check_in_traps(&self, pos: &(usize, usize)) -> bool {
         const TRAP: u64 = 0x1410000000000414;
 
         if TRAP & (1 << Self::pos_to_idx(pos)) > 0 {
@@ -311,7 +316,7 @@ impl Game {
     fn switch_player(&mut self) {
         self.role = if self.role == RED { BLACK }
                     else { RED };
-        self.compture_turn = ! self.compture_turn;
+        // self.compture_turn = ! self.compture_turn;
     }
 
     pub fn move_chess(&mut self, mv: &MOVE) {
@@ -328,7 +333,6 @@ impl Game {
         }
 
         self.ctx.push_back(Context::new(eated, mv));
-        self.step += 1;
         self.switch_player()
     }
 
@@ -345,7 +349,6 @@ impl Game {
                 std::mem::swap(&mut *p_dst, &mut *p_eated);
             }
 
-            self.step -= 1;
             self.switch_player()
         }
     }
@@ -357,7 +360,6 @@ impl Game {
                 if let Some(_) = self.movable_pos.iter().find(|&&p| { return p == dst }) {
                     let src = self.selected_chess.unwrap();
                     self.move_chess(&(src, dst));
-                    self.compture_turn = true; // turn by compture
                 }
                 self.selected_chess = None;
             } else { // must be selected, because role is same as chess
@@ -368,6 +370,30 @@ impl Game {
 
             self.movable_pos.clear();
         }
+    }
+
+    pub fn check_win(&self) -> Role {
+        let (mut red_chess_num, mut black_chess_num) = (0, 0);
+
+        for i in 0..ROW_NUM {
+            for j in 0..COL_NUM {
+                let chess_id = self.chesses[i][j].id;
+                if chess_id == EMPTY { continue; }
+
+                if self.check_in_den(&(i, j)) { return get_chess_role(chess_id); }
+
+                if get_chess_role(chess_id) == RED {
+                    red_chess_num += 1;
+                } else {
+                    black_chess_num += 1;
+                }
+            }
+        }
+        if red_chess_num * black_chess_num == 0 {
+            if red_chess_num > 0 { return RED; }
+            else { return BLACK; }
+        }
+        EMPTY
     }
 
     pub fn run(&mut self) -> Result<(), String> {
@@ -396,9 +422,13 @@ impl Game {
                 if self.compture_turn { self.undo_move(); }
             }
 
-            self.process_click(click_pos);
-
-            self.search_main();
+            let win_status = self.check_win();
+            if win_status == EMPTY {
+                self.process_click(click_pos);
+                self.search_main();
+            } else {
+                println!("{} wins!", if win_status == RED { "red" } else { "BLACK" });
+            }
 
             // update
             self.render()?;
