@@ -459,13 +459,13 @@ impl Game {
             let win_status = self.check_win();
             if win_status == EMPTY {
                 self.process_click(click_pos);
+                // update
+                self.render()?;
                 self.search_main();
             } else {
+                self.render()?;
                 println!("{} wins!", if win_status == RED { "RED" } else { "BLACK" });
             }
-
-            // update
-            self.render()?;
 
             // time management
             ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
