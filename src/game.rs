@@ -178,13 +178,10 @@ impl Game {
 
     fn process_selected_chess(&mut self) -> Result<(), String> {
         if let Some(pos) = self.selected_chess {
-            let mut tgt_pos = Vec::new();
-            tgt_pos.push(pos);
-            self.draw_frame(&tgt_pos)?;
+            self.draw_frame(&vec![pos])?;
 
-            let movable_pos = self.generate_steps(pos);
-            self.draw_frame(&movable_pos.iter().map(|&mv| { get_dst_pos(mv) }).collect::<Vec<POS>>())?;
-            self.movable_pos = movable_pos;
+            self.movable_pos = self.generate_steps(pos);
+            self.draw_frame(&self.movable_pos.iter().map(|&mv| { get_dst_pos(mv) }).collect())?;
         }
         Ok(())
     }
@@ -309,11 +306,13 @@ impl Game {
                     basic_steps.push(to_move(&(src_, (src_.0, 6))));
                 }
             }
+
+            basic_steps = basic_steps.into_iter().filter(|&mv| {
+                let (src, dst) = (get_src_pos(mv), get_dst_pos(mv));
+                self.check_movable(src, dst) && !self.check_rat(src, dst)
+            }).collect()
         }
-        basic_steps.into_iter().filter(|&mv| {
-            let (src, dst) = (get_src_pos(mv), get_dst_pos(mv));
-            self.check_movable(src, dst) && !self.check_rat(src, dst)
-        }).collect()
+        basic_steps
     }
 
     fn generate_basic_steps(&self, src: POS, to_water: bool) -> Vec<MOVE> {
@@ -321,22 +320,15 @@ impl Game {
         const DY: [i32; 4] = [0, 1, 0, -1];
         let src_ = get_pos(src);
         let (x, y) = (src_.0 as i32, src_.1 as i32);
-        let mut result = Vec::new();
-        result.reserve(8);
-        for i in 0..4 {
-            let (xx, yy) = (x + DX[i], y + DY[i]);
-            if xx < 0 || xx >= ROW_NUM as i32 ||
-                yy < 0 || yy >= COL_NUM as i32 {
-                    continue;
-            }
-            let dst = (xx as usize, yy as usize);
-            if self.check_movable(src, to_pos(&dst)) {
-                if ! Self::check_in_water(to_pos(&dst)) || to_water {
-                    result.push(to_move(&(src_, dst)))
-                }
-            }
-        }
-        result
+
+        (0..4).into_iter().map(|idx| {
+            to_move(&(get_pos(src), ((x + DX[idx]) as usize, (y + DY[idx]) as usize)))
+        }).filter(|&mv| {
+            let (_, dst) = get_move(mv);
+            dst.0 < ROW_NUM && dst.1 < COL_NUM &&
+            self.check_movable(src, get_dst_pos(mv)) &&
+            (! Self::check_in_water(to_pos(&dst)) || to_water)
+        }).collect()
     }
 
     pub fn generate_steps(&self, pos: POS) -> Vec<MOVE> {
@@ -399,7 +391,6 @@ impl Game {
             } else { // must be selected, because role is same as chess
                 println!("selected_chess: {:?}", to_pos(&dst));
                 self.selected_chess = Some(to_pos(&dst));
-                return;
             }
 
             self.movable_pos.clear();
