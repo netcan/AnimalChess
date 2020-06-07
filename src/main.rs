@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate array_macro;
-
 mod game;
 mod chess;
 mod ai;
