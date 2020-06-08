@@ -1,63 +1,98 @@
 use sdl2::render::{Texture, TextureCreator};
 use sdl2::image::LoadTexture;
+use std::slice::Iter;
 
-pub type ChessType = u8;
-pub type Role      = u8;
-pub type ChessId   = u8;
-
-pub const ELEPHANT: ChessType = 0x0;
-pub const LION:     ChessType = 0x1;
-pub const TIGER:    ChessType = 0x2;
-pub const PANTHER:  ChessType = 0x3;
-pub const WOLF:     ChessType = 0x4;
-pub const DOG:      ChessType = 0x5;
-pub const CAT:      ChessType = 0x6;
-pub const RAT:      ChessType = 0x7;
-
-pub const RED:     Role      = 0x8;
-pub const BLACK:   Role      = 0x10;
-
-pub const EMPTY:   ChessId   = 0x0;
-
-pub fn get_chess_id(role: Role, chess_type: ChessType) -> ChessId {
-    role | chess_type
+#[derive(PartialEq, Copy, Clone, Debug)]
+pub enum ChessKind {
+    ELEPHANT,
+    LION,
+    TIGER,
+    PANTHER,
+    WOLF,
+    DOG,
+    CAT,
+    RAT,
+    EMPTY,
 }
 
-pub fn get_chess_role(id: ChessId) -> Role {
-    return id & 0x18;
-}
-
-pub fn get_chess_type(id: ChessId) -> ChessType {
-    return id & 0x7;
-}
-
-pub fn get_chess_idx(chess_id: ChessId) -> usize {
-    (chess_id - 8) as usize
-}
-
-pub fn get_chess_texture<T>(chess_id: ChessId, texture_creator: &TextureCreator<T>) -> Texture {
-    let mut path = String::from("assets/");
-    match chess_id {
-        EMPTY => { path.push_str("oo.gif"); }
-        id => {
-            match get_chess_role(id) {
-                RED   => { path.push('r'); }
-                BLACK => { path.push('b'); }
-                _     => unreachable!()
-            }
-
-            match get_chess_type(id) {
-                ELEPHANT => { path.push_str("e.png"); }
-                LION     => { path.push_str("l.png"); }
-                TIGER    => { path.push_str("t.png"); }
-                PANTHER  => { path.push_str("p.png"); }
-                WOLF     => { path.push_str("w.png"); }
-                DOG      => { path.push_str("d.png"); }
-                CAT      => { path.push_str("c.png"); }
-                RAT      => { path.push_str("r.png"); }
-                _       => unreachable!()
-            }
+impl ChessKind {
+    pub fn get_idx(self) -> usize {
+        use ChessKind::*;
+        match self {
+            ELEPHANT => 0,
+            LION     => 1,
+            TIGER    => 2,
+            PANTHER  => 3,
+            WOLF     => 4,
+            DOG      => 5,
+            CAT      => 6,
+            RAT      => 7,
+            EMPTY    => panic!("caller should guarantee chess type not empty")
         }
     }
-    texture_creator.load_texture(path).expect("load texture failed")
+    pub fn iter() -> Iter<'static, Self> {
+        use self::ChessKind::*;
+        static KIND: [ChessKind; 8] = [
+            ELEPHANT, LION, TIGER, PANTHER, WOLF, DOG, CAT, RAT,
+        ];
+        KIND.iter()
+    }
 }
+
+#[derive(PartialEq, Copy, Clone, Debug)]
+pub enum RoleType {
+    RED,
+    BLACK,
+    EMPTY,
+}
+
+impl RoleType {
+    pub fn iter() -> Iter<'static, Self> {
+        use self::RoleType::*;
+        static ROLE: [RoleType; 2] = [ RED, BLACK ];
+        ROLE.iter()
+    }
+}
+
+#[derive(PartialEq, Copy, Clone, Debug)]
+pub struct ChessId {
+    pub role: RoleType,
+    pub kind: ChessKind,
+}
+
+impl ChessId {
+    pub fn get_chess_idx(self) -> usize {
+        use RoleType::*;
+        self.kind.get_idx() + match self.role {
+            RED   => 0,
+            BLACK => 8,
+            EMPTY => panic!("caller should guarantee chess id not empty")
+        }
+    }
+
+    pub fn get_chess_texture<T>(self, texture_creator: &TextureCreator<T>) -> Texture {
+        let mut path = String::from("assets/");
+        use RoleType::*;
+        use ChessKind::*;
+        match self.role {
+            RED   => { path.push('r'); }
+            BLACK => { path.push('b'); }
+            _     => { unreachable!(); }
+        }
+        match self.kind {
+            ELEPHANT => { path.push_str("e.png"); }
+            LION     => { path.push_str("l.png"); }
+            TIGER    => { path.push_str("t.png"); }
+            PANTHER  => { path.push_str("p.png"); }
+            WOLF     => { path.push_str("w.png"); }
+            DOG      => { path.push_str("d.png"); }
+            CAT      => { path.push_str("c.png"); }
+            RAT      => { path.push_str("r.png"); }
+            _        => { unreachable!();         }
+        }
+
+        texture_creator.load_texture(path).expect("load texture failed")
+    }
+}
+
+pub const EMPTY_CHESS: ChessId = ChessId { kind: ChessKind::EMPTY, role: RoleType::EMPTY };

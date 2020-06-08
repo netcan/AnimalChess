@@ -7,7 +7,7 @@ use sdl2::EventPump;
 use sdl2::image::LoadTexture;
 use std::time::Duration;
 use std::collections::VecDeque;
-use crate::chess::*;
+use crate::chess::{*, ChessKind::*};
 
 pub type POS = u8;
 pub type MOVE = u16;
@@ -67,7 +67,7 @@ impl Context {
 pub struct Game {
     pub chesses: [[ChessId; COL_NUM]; ROW_NUM],
     chesses_textures: Vec<Texture>,
-    pub role: Role, // 轮到谁下
+    pub role: RoleType, // 轮到谁下
     board: Texture,
     canvas: WindowCanvas,
     event_pump: EventPump,
@@ -88,39 +88,38 @@ impl Game {
         let fen_u8 = fen.as_bytes();
         let mut fen_idx = 0;
 
-        let get_role = |c: u8| -> Role {
-            if (c as char).is_lowercase() { BLACK }
-            else { RED }
+        let get_role = |c: u8| -> RoleType {
+            if (c as char).is_lowercase() { RoleType::BLACK }
+            else { RoleType::RED }
         };
 
         let mut pos = 0usize;
         while fen_idx < fen_u8.len() {
-            let mut chess_id = EMPTY;
+            let mut chess_id = EMPTY_CHESS;
             match fen_u8[fen_idx] {
-                c @ b'e' | c @ b'E' => { chess_id = get_chess_id(get_role(c), ELEPHANT); }
-                c @ b'l' | c @ b'L' => { chess_id = get_chess_id(get_role(c), LION);     }
-                c @ b't' | c @ b'T' => { chess_id = get_chess_id(get_role(c), TIGER);    }
-                c @ b'p' | c @ b'P' => { chess_id = get_chess_id(get_role(c), PANTHER);  }
-                c @ b'w' | c @ b'W' => { chess_id = get_chess_id(get_role(c), WOLF);     }
-                c @ b'd' | c @ b'D' => { chess_id = get_chess_id(get_role(c), DOG);      }
-                c @ b'c' | c @ b'C' => { chess_id = get_chess_id(get_role(c), CAT);      }
-                c @ b'r' | c @ b'R' => { chess_id = get_chess_id(get_role(c), RAT);      }
+                c @ b'e' | c @ b'E' => { chess_id = ChessId { role: get_role(c), kind: ELEPHANT }; }
+                c @ b'l' | c @ b'L' => { chess_id = ChessId { role: get_role(c), kind: LION     }; }
+                c @ b't' | c @ b'T' => { chess_id = ChessId { role: get_role(c), kind: TIGER    }; }
+                c @ b'p' | c @ b'P' => { chess_id = ChessId { role: get_role(c), kind: PANTHER  }; }
+                c @ b'w' | c @ b'W' => { chess_id = ChessId { role: get_role(c), kind: WOLF     }; }
+                c @ b'd' | c @ b'D' => { chess_id = ChessId { role: get_role(c), kind: DOG      }; }
+                c @ b'c' | c @ b'C' => { chess_id = ChessId { role: get_role(c), kind: CAT      }; }
+                c @ b'r' | c @ b'R' => { chess_id = ChessId { role: get_role(c), kind: RAT      }; }
                 n @ b'1' ..= b'9'   => { pos += (n - b'0') as usize; }
                 b'/' => { }
                 b' ' => { break; }
                 _    => { unreachable!() }
             }
 
-            if chess_id != EMPTY {
+            if chess_id != EMPTY_CHESS {
                 self.chesses[pos / COL_NUM][pos % COL_NUM] = chess_id;
                 pos += 1;
             }
             fen_idx += 1;
         }
         fen_idx += 1; // eat ' '
-        self.role = if fen_u8[fen_idx] == b'w' { RED }
-                    else { BLACK };
-
+        self.role = if fen_u8[fen_idx] == b'w' { RoleType::RED }
+                    else { RoleType::BLACK };
     }
 
     pub fn new(window: Window, event_pump: EventPump) -> Self {
@@ -131,9 +130,9 @@ impl Game {
         let texture_creator = canvas.texture_creator();
 
         let mut game = Game {
-            chesses: [[EMPTY; COL_NUM]; ROW_NUM],
+            chesses: [[EMPTY_CHESS; COL_NUM]; ROW_NUM],
             chesses_textures: Vec::new(),
-            role: RED,
+            role: RoleType::RED,
             board: texture_creator.load_texture("assets/board.png").unwrap(),
             selected_frame: texture_creator.load_texture("assets/oos.gif").unwrap(),
             selected_chess: None,
@@ -146,8 +145,12 @@ impl Game {
             event_pump,
         };
 
-        for chess_id in 8..24 {
-            game.chesses_textures.push(get_chess_texture(chess_id, &texture_creator));
+        for role in RoleType::iter() {
+            for kind in ChessKind::iter() {
+                game.chesses_textures.push(
+                    ChessId { role: *role, kind: *kind }.get_chess_texture(&texture_creator)
+                );
+            }
         }
 
         game.load_fen("l5t/1d3c1/r1p1w1e/7/7/7/E1W1P1R/1C3D1/T5L w - - 0 1");
@@ -192,8 +195,8 @@ impl Game {
         for i in 0..ROW_NUM {
             for j in 0..COL_NUM {
                 let chess = self.chesses[i][j];
-                if chess != EMPTY {
-                    self.canvas.copy(&self.chesses_textures[get_chess_idx(chess)],
+                if chess != EMPTY_CHESS {
+                    self.canvas.copy(&self.chesses_textures[chess.get_chess_idx()],
                         None, self.get_dst_rect(to_pos(&(i, j))))?;
                 }
             }
@@ -214,24 +217,20 @@ impl Game {
     fn check_movable(&self, src: POS, dst: POS) -> bool {
         {
             let src = get_pos(src);
-            match (get_chess_role(self.chesses[src.0][src.1]), dst) {
-                (RED, RED_DEN) | (BLACK, BLACK_DEN) => return false,
+            match (self.chesses[src.0][src.1].role, dst) {
+                (RoleType::RED, RED_DEN) | (RoleType::BLACK, BLACK_DEN) => return false,
                 _ => {}
             }
         }
 
         let (src_chess, dst_chess) = self.get_src_dst_chess(src, dst);
-        if dst_chess == EMPTY { return true; }
-        if get_chess_role(src_chess) == get_chess_role(dst_chess) { return false; }
+        if dst_chess == EMPTY_CHESS { return true; }
+        if src_chess.role == dst_chess.role { return false; }
 
-        let (src_chess_type, dst_chess_type) = (
-            get_chess_type(src_chess), get_chess_type(dst_chess)
-        );
-
-        match (src_chess_type, dst_chess_type) {
+        match (src_chess.kind, dst_chess.kind) {
             (RAT, ELEPHANT) => ! Self::check_in_water(src),
             (ELEPHANT, RAT) => false,
-            (s, d)          => s <= d || self.check_in_traps(dst)
+            (s, d)          => s.get_idx() <= d.get_idx() || self.check_in_traps(dst)
         }
     }
 
@@ -244,13 +243,13 @@ impl Game {
         let (src, dst) = (get_pos(src), get_pos(dst));
         if src.0 == dst.0 {
             for j in src.1.min(dst.1) ..= src.1.max(dst.1) {
-                if get_chess_type(self.chesses[src.0][j]) == RAT && Self::check_in_water(to_pos(&(src.0, j))) {
+                if self.chesses[src.0][j].kind == RAT && Self::check_in_water(to_pos(&(src.0, j))) {
                     return true;
                 }
             }
         } else {
             for i in src.0.min(dst.0) ..= src.0.max(dst.0) {
-                if get_chess_type(self.chesses[i][src.1]) == RAT && Self::check_in_water(to_pos(&(i, src.1))) {
+                if self.chesses[i][src.1].kind == RAT && Self::check_in_water(to_pos(&(i, src.1))) {
                     return true;
                 }
             }
@@ -270,8 +269,8 @@ impl Game {
 
     pub fn check_in_den(&self, pos: POS) -> bool {
         let pos_ = get_pos(pos);
-        match (get_chess_role(self.chesses[pos_.0][pos_.1]), pos) {
-            (RED, BLACK_DEN) | (BLACK, RED_DEN) => return true,
+        match (self.chesses[pos_.0][pos_.1].role, pos) {
+            (RoleType::RED, BLACK_DEN) | (RoleType::BLACK, RED_DEN) => return true,
             _ => { return false }
         }
     }
@@ -281,7 +280,7 @@ impl Game {
 
         let pos_ = get_pos(pos);
         if TRAP & (1 << Self::pos_to_idx(pos)) > 0 {
-            if get_chess_role(self.chesses[pos_.0][pos_.1]) == RED {
+            if self.chesses[pos_.0][pos_.1].role == RoleType::RED {
                 return pos_.0 <= 1;
             } else {
                 return pos_.0 >= 7;
@@ -333,7 +332,7 @@ impl Game {
 
     pub fn generate_steps(&self, pos: POS) -> Vec<MOVE> {
         let pos_ = get_pos(pos);
-        match get_chess_type(self.chesses[pos_.0][pos_.1]) {
+        match self.chesses[pos_.0][pos_.1].kind {
             RAT =>          { self.generate_basic_steps(pos, true)  }
             TIGER | LION => { self.generate_tl_steps(pos)           }
             _ =>            { self.generate_basic_steps(pos, false) }
@@ -348,12 +347,14 @@ impl Game {
         let row = (pos.1 / CELL_HEIGHT as i32) as usize;
         let col = (pos.0 / CELL_WIDTH as i32) as usize;
 
+        if row >= ROW_NUM || col >= COL_NUM { return None; }
+
         Some((row, col))
     }
 
     fn switch_player(&mut self) {
-        self.role = if self.role == RED { BLACK }
-                    else { RED };
+        self.role = if self.role == RoleType::RED { RoleType::BLACK }
+                    else { RoleType::RED };
         self.compture_turn = ! self.compture_turn;
     }
 
@@ -362,7 +363,7 @@ impl Game {
 
         let eated = self.chesses[dst.0][dst.1];
         self.chesses[dst.0][dst.1] = self.chesses[src.0][src.1];
-        self.chesses[src.0][src.1] = EMPTY;
+        self.chesses[src.0][src.1] = EMPTY_CHESS;
 
         self.ctx.push_back(Context::new(eated, mv));
         self.switch_player()
@@ -381,7 +382,7 @@ impl Game {
 
     fn process_click(&mut self, pos: (i32, i32)) {
         if let Some(dst) = self.get_click_rect(pos) {
-            if get_chess_role(self.chesses[dst.0][dst.1]) != self.role {
+            if self.chesses[dst.0][dst.1].role != self.role {
                 // may be move
                 if let Some(_) = self.movable_pos.iter().find(|&&mv| { return get_dst_pos(mv) == to_pos(&dst) }) {
                     let src = self.selected_chess.unwrap();
@@ -397,17 +398,17 @@ impl Game {
         }
     }
 
-    pub fn check_win(&self) -> Role {
+    pub fn check_win(&self) -> RoleType {
         let (mut red_chess_num, mut black_chess_num) = (0, 0);
 
         for i in 0..ROW_NUM {
             for j in 0..COL_NUM {
                 let chess_id = self.chesses[i][j];
-                if chess_id == EMPTY { continue; }
+                if chess_id == EMPTY_CHESS { continue; }
 
-                if self.check_in_den(to_pos(&(i, j))) { return get_chess_role(chess_id); }
+                if self.check_in_den(to_pos(&(i, j))) { return chess_id.role; }
 
-                if get_chess_role(chess_id) == RED {
+                if chess_id.role == RoleType::RED {
                     red_chess_num += 1;
                 } else {
                     black_chess_num += 1;
@@ -415,10 +416,10 @@ impl Game {
             }
         }
         if red_chess_num * black_chess_num == 0 {
-            if red_chess_num > 0 { return RED; }
-            else { return BLACK; }
+            if red_chess_num > 0 { return RoleType::RED; }
+            else { return RoleType::BLACK; }
         }
-        EMPTY
+        RoleType::EMPTY
     }
 
     pub fn run(&mut self) -> Result<(), String> {
@@ -445,17 +446,18 @@ impl Game {
             if undo {
                 self.undo_move();
                 if self.compture_turn { self.undo_move(); }
+                self.movable_pos.clear();
             }
 
             let win_status = self.check_win();
-            if win_status == EMPTY {
+            if win_status == RoleType::EMPTY {
                 self.process_click(click_pos);
                 // update
                 self.render()?;
                 self.search_main();
             } else {
                 self.render()?;
-                println!("{} wins!", if win_status == RED { "RED" } else { "BLACK" });
+                println!("{:?} wins!", win_status);
             }
 
             // time management
