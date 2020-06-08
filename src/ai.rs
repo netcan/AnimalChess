@@ -29,18 +29,107 @@ impl Game {
 
     fn evaluate(&self) -> ScoreType {
         const CHESS_SCORE: [ScoreType; 8] = [
+            // ELEPHANT, LION, TIGER, PANTHER, WOLF, DOG, CAT, RAT
             1000, 900, 800, 700, 600, 500, 400, 300
         ];
-        const POS_SCORE: [[ScoreType; COL_NUM]; ROW_NUM] = [
-            [0, 0, 0, 0, 0, 0, 0],
-            [10, 10, 10, 10, 10, 10, 10],
-            [20, 20, 20, 20, 20, 20, 20],
-            [30, 30, 30, 30, 30, 30, 30],
-            [40, 40, 40, 40, 40, 40, 40],
-            [50, 50, 50, 50, 50, 50, 50],
-            [60, 60, 60, 60, 60, 60, 60],
-            [70, 70, 70, 70, 70, 70, 70],
-            [80, 80, 80, 80, 80, 80, 80],
+        // const POS_SCORE:
+        const POS_SCORE: [[[ScoreType; COL_NUM]; ROW_NUM]; 8] = [
+            // ELEPHANT
+            [
+                [ 0,  0,  0,  0,  0,  0,  0],
+                [10, 10, 10, 10, 10, 10, 10],
+                [20, 20, 20, 20, 20, 20, 20],
+                [30, 30, 30, 30, 30, 30, 30],
+                [40, 40, 40, 40, 40, 40, 40],
+                [50, 50, 50, 50, 50, 50, 50],
+                [60, 60, 60, 60, 60, 60, 60],
+                [70, 70, 70, 70, 70, 70, 70],
+                [80, 80, 80, 80, 80, 80, 80]
+            ],
+            // LION
+            [
+                [ 0,  0,  0,  0,  0,  0,  0],
+                [10, 10, 10, 10, 10, 10, 10],
+                [20, 20, 20, 20, 20, 20, 20],
+                [30, 30, 30, 30, 30, 30, 30],
+                [40, 40, 40, 40, 40, 40, 40],
+                [50, 50, 50, 50, 50, 50, 50],
+                [60, 60, 60, 60, 60, 60, 60],
+                [70, 70, 70, 70, 70, 70, 70],
+                [80, 80, 80, 80, 80, 80, 80]
+            ],
+            // TIGER
+            [
+                [ 0,  0,  0,  0,  0,  0,  0],
+                [10, 10, 10, 10, 10, 10, 10],
+                [20, 20, 20, 20, 20, 20, 20],
+                [30, 30, 30, 30, 30, 30, 30],
+                [40, 40, 40, 40, 40, 40, 40],
+                [50, 50, 50, 50, 50, 50, 50],
+                [60, 60, 60, 60, 60, 60, 60],
+                [70, 70, 70, 70, 70, 70, 70],
+                [80, 80, 80, 80, 80, 80, 80]
+            ],
+            // PANTHER
+            [
+                [ 15,  20,  15,  15,  15,  20,  15],
+                [ 15,  15,  20,  15,  20,  15,  15],
+                [ 15,  15,  15,  15,  15,  15,  15],
+                [ 0,  0,  0,  0,  0,  0,  0],
+                [ 0,  0,  0,  0,  0,  0,  0],
+                [ 0,  0,  0,  0,  0,  0,  0],
+                [ 0,  0,  0,  0,  0,  0,  0],
+                [ 0,  0,  0,  0,  0,  0,  0],
+                [ 0,  0,  0,  0,  0,  0,  0],
+            ],
+            // WOLF
+            [
+                [ 0,  0,  0,  0,  0,  0,  0],
+                [10, 10, 10, 10, 10, 10, 10],
+                [20, 20, 20, 20, 20, 20, 20],
+                [30, 30, 30, 30, 30, 30, 30],
+                [40, 40, 40, 40, 40, 40, 40],
+                [50, 50, 50, 50, 50, 50, 50],
+                [60, 60, 60, 60, 60, 60, 60],
+                [70, 70, 70, 70, 70, 70, 70],
+                [80, 80, 80, 80, 80, 80, 80]
+            ],
+            // DOG
+            [
+                [ 0,  0,  0,  0,  0,  0,  0],
+                [10, 10, 10, 10, 10, 10, 10],
+                [20, 20, 20, 20, 20, 20, 20],
+                [30, 30, 30, 30, 30, 30, 30],
+                [40, 40, 40, 40, 40, 40, 40],
+                [50, 50, 50, 50, 50, 50, 50],
+                [60, 60, 60, 60, 60, 60, 60],
+                [70, 70, 70, 70, 70, 70, 70],
+                [80, 80, 80, 80, 80, 80, 80]
+            ],
+            // CAT
+            [
+                [ 0,  0,  0,  0,  0,  0,  0],
+                [10, 10, 10, 10, 10, 10, 10],
+                [20, 20, 20, 20, 20, 20, 20],
+                [30, 30, 30, 30, 30, 30, 30],
+                [40, 40, 40, 40, 40, 40, 40],
+                [50, 50, 50, 50, 50, 50, 50],
+                [60, 60, 60, 60, 60, 60, 60],
+                [70, 70, 70, 70, 70, 70, 70],
+                [80, 80, 80, 80, 80, 80, 80]
+            ],
+            // RAT
+            [
+                [ 0,  0,  0,  0,  0,  0,  0],
+                [10, 10, 10, 10, 10, 10, 10],
+                [20, 20, 20, 20, 20, 20, 20],
+                [30, 30, 30, 30, 30, 30, 30],
+                [40, 40, 40, 40, 40, 40, 40],
+                [50, 50, 50, 50, 50, 50, 50],
+                [60, 60, 60, 60, 60, 60, 60],
+                [70, 70, 70, 70, 70, 70, 70],
+                [80, 80, 80, 80, 80, 80, 80]
+            ],
         ];
 
         let mut score: ScoreType = 0;
@@ -51,10 +140,10 @@ impl Game {
 
                 let chess_score = CHESS_SCORE[get_chess_type(chess_id) as usize];
                 if get_chess_role(chess_id) == RED {
-                    let pos_score = POS_SCORE[ROW_NUM - i - 1][j];
+                    let pos_score = POS_SCORE[get_chess_type(chess_id) as usize][ROW_NUM - i - 1][j];
                     score += chess_score + pos_score;
                 } else {
-                    let pos_score = POS_SCORE[i][j];
+                    let pos_score = POS_SCORE[get_chess_type(chess_id) as usize][i][j];
                     score -= chess_score + pos_score;
                 }
             }
@@ -93,17 +182,20 @@ impl Game {
 
             if score > best_score {
                 best_score = score;
-                best_move = Some(mv);
                 if score >= beta {
+                    best_move = Some(mv);
                     break;
                 }
-                if score > alpha { alpha = score; }
+                if score > alpha {
+                    best_move = Some(mv);
+                    alpha = score;
+                }
             }
 
         }
 
         if let Some(mv) = best_move {
-            self.compture_mv = Some(mv);
+            if cur_depth == 0 { self.compture_mv = Some(mv); }
             self.store_best_move(mv, depth - cur_depth);
         }
         best_score
@@ -116,21 +208,20 @@ impl Game {
         self.history_table = [[[0; COL_NUM]; ROW_NUM]; 16];
         self.compture_mv = None;
 
-        // println!("search init board score = {}", self.evaluate());
+        println!("search init board score = {}", self.evaluate());
         let timeout: i32 = 500 * 1000; // 200 ms
         let now = Instant::now();
 
         let mut max_depth = 0;
-        let mut best_score = 0;
+        let mut score = 0;
         for d in 1..=MAX_DEPTH {
             if now.elapsed().as_micros() as i32 >= timeout { break; }
-            let score = self.alpha_beta(0, d, -INF, INF);
-            best_score = best_score.max(score);
+            score = self.alpha_beta(0, d, -INF, INF);
             max_depth = d;
             if score >= WIN_SCORE || score <= -WIN_SCORE { break; }
         }
 
-        // println!("max_depth = {} find best score = {}", max_depth, best_score);
+        println!("max_depth = {} find score = {}", max_depth, score);
 
         if let Some(mv) = self.compture_mv {
             // println!("compture move: {:?} -> {:?}", mv.0, mv.1);
