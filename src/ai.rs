@@ -8,6 +8,7 @@ const WIN_SCORE: ScoreType = INF - MAX_DEPTH;
 
 impl Game {
     fn generate_all_steps(&mut self) -> Vec<MOVE> {
+        if self.check_win() != RoleType::EMPTY  { return Vec::new(); }
         let mut moves = Vec::new();
         moves.reserve(32);
         for i in 0..ROW_NUM {
@@ -168,7 +169,6 @@ impl Game {
         cur_depth: i32, depth: i32,
         mut alpha: ScoreType, beta: ScoreType) -> ScoreType {
 
-        if self.check_win() != RoleType::EMPTY { return cur_depth - INF; }
         if cur_depth == depth { return self.evaluate(); }
 
         // 超出边界的alph-beta搜索
@@ -193,6 +193,7 @@ impl Game {
             }
 
         }
+        if best_score == -INF { return cur_depth - INF; }
 
         if let Some(mv) = best_move {
             if cur_depth == 0 { self.compture_mv = Some(mv); }

@@ -446,7 +446,7 @@ impl Game {
             if undo {
                 self.undo_move();
                 if self.compture_turn { self.undo_move(); }
-                self.movable_pos.clear();
+                self.selected_chess = None;
             }
 
             let win_status = self.check_win();

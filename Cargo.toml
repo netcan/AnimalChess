@@ -10,6 +10,7 @@ repository = "https://github.com/netcan/AnimalChess"
 keywords = ["gamedev", "chess", "ai", "sdl"]
 
 [dependencies]
+rand = "0.7.3"
 
 [dependencies.sdl2]
 version = "0.34.0"

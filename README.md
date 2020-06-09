@@ -15,3 +15,7 @@ git clone https://github.com/netcan/AnimalChess.git
 cd AnimalChess
 cargo run --release
 ```
+
+## Todo
+- [ ] Seperate `game.rs` to `gui.rs` and `board.rs`
+- [ ] Add `Monte Carlo Tree Search` Algorithm
