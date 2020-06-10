@@ -1,8 +1,9 @@
-mod game;
+mod gui;
 mod chess;
 mod ai;
+mod board;
 
-use game::*;
+use gui::*;
 
 const WINDOW_WIDTH: u32 = 500;
 const WINDOW_HEIGHT: u32 = 636;

@@ -1,30 +1,40 @@
 use std::time::Instant;
-use crate::game::*;
+use crate::board::*;
+use crate::gui::Player;
 use crate::chess::{*, RoleType::*};
+use rand::seq::SliceRandom;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 const MAX_DEPTH: i32 = 100;
 const INF: ScoreType = 1000000;
 const WIN_SCORE: ScoreType = INF - MAX_DEPTH;
 
-impl Game {
-    fn generate_all_steps(&mut self) -> Vec<MOVE> {
-        if self.check_win() != RoleType::EMPTY  { return Vec::new(); }
-        let mut moves = Vec::new();
-        moves.reserve(32);
-        for i in 0..ROW_NUM {
-            for j in 0..COL_NUM {
-                let chess_id = self.chesses[i][j];
-                if chess_id.role != self.role { continue }
-                moves.extend(self.generate_steps(to_pos(&(i, j))));
-            }
+type HisTblType = [[[ScoreType; COL_NUM]; ROW_NUM]; 16];
+
+pub struct AlphaBeta {
+    board: Rc<RefCell<Board>>,
+    history_table: HisTblType,
+    compture_mv: Option<MOVE>,
+}
+
+impl AlphaBeta {
+    pub fn new(board: Rc<RefCell<Board>>) -> Self {
+        Self {
+            board,
+            history_table: [[[0; COL_NUM]; ROW_NUM]; 16],
+            compture_mv: None,
         }
+    }
+
+    fn generate_all_steps(&mut self) -> Vec<MOVE> {
+        let mut moves = self.board.borrow().generate_all_steps();
         moves.sort_by(|&lhs, &rhs| {
             let lhs_his_score = *self.get_history_score(lhs);
             let rhs_his_score = *self.get_history_score(rhs);
 
             (rhs_his_score).cmp(&lhs_his_score)
         });
-
         moves
     }
 
@@ -136,7 +146,7 @@ impl Game {
         let mut score: ScoreType = 0;
         for i in 0..ROW_NUM {
             for j in 0..COL_NUM {
-                let chess_id = self.chesses[i][j];
+                let chess_id = self.board.borrow().chesses[i][j];
                 if chess_id == EMPTY_CHESS { continue; }
 
                 let chess_score = CHESS_SCORE[chess_id.kind.get_idx()];
@@ -150,14 +160,14 @@ impl Game {
             }
         }
 
-        if self.role == RED { score }
+        if self.board.borrow().role == RED { score }
         else { -score }
     }
 
     fn get_history_score(&mut self, mv: MOVE) -> &mut ScoreType {
         let (src, dst) = get_move(mv);
         &mut self.history_table[
-            self.chesses[src.0][src.1].get_chess_idx()
+            self.board.borrow().chesses[src.0][src.1].get_chess_idx()
         ][dst.0][dst.1]
     }
 
@@ -176,9 +186,9 @@ impl Game {
         let mut best_move: Option<MOVE> = None;
 
         for mv in self.generate_all_steps() {
-            self.move_chess(mv);
+            self.board.borrow_mut().move_chess(mv);
             let score = -self.alpha_beta(cur_depth + 1, depth, -beta, -alpha);
-            self.undo_move();
+            self.board.borrow_mut().undo_move();
 
             if score > best_score {
                 best_score = score;
@@ -202,9 +212,7 @@ impl Game {
         best_score
     }
 
-    pub fn search_main(&mut self) {
-        if ! self.compture_turn { return; }
-
+    pub fn search_main(&mut self) -> MOVE {
         // clean up
         self.history_table = [[[0; COL_NUM]; ROW_NUM]; 16];
         self.compture_mv = None;
@@ -225,11 +233,20 @@ impl Game {
         println!("max_depth = {} find score = {}", max_depth, score);
 
         if let Some(mv) = self.compture_mv {
-            // println!("compture move: {:?} -> {:?}", mv.0, mv.1);
-            self.move_chess(mv);
+            mv
+        } else {
+            println!("not found solution, random move.");
+            self.board.borrow()
+                .generate_all_steps()
+                .choose(&mut rand::thread_rng())
+                .copied().expect("No Moveable!")
         }
-
     }
+}
 
 
+impl Player for AlphaBeta {
+    fn get_move(&mut self) -> MOVE {
+        self.search_main()
+    }
 }
