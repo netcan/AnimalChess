@@ -11,8 +11,7 @@ pub const COL_NUM: usize = 7;
 const RED_DEN:   POS = 0x83;
 const BLACK_DEN: POS = 0x3;
 
-
-fn get_pos(pos: POS) -> (usize, usize) {
+pub fn get_pos(pos: POS) -> (usize, usize) {
     ((pos >> 4) as usize, (pos & 0xf) as usize)
 }
 
@@ -21,11 +20,11 @@ pub fn get_move(mv: MOVE) -> ((usize, usize), (usize, usize)) {
     (get_pos(src as POS), get_pos(dst as POS))
 }
 
-fn get_src_pos(mv: MOVE) -> POS {
+pub fn get_src_pos(mv: MOVE) -> POS {
     (mv >> 8) as POS
 }
 
-fn get_dst_pos(mv: MOVE) -> POS {
+pub fn get_dst_pos(mv: MOVE) -> POS {
     (mv & 0xff) as POS
 }
 
@@ -33,7 +32,7 @@ pub fn to_pos(pos: &(usize, usize)) -> POS {
     ((pos.0 << 4) | pos.1) as POS
 }
 
-fn to_move(mv: &((usize, usize), (usize, usize))) -> MOVE {
+pub fn to_move(mv: &((usize, usize), (usize, usize))) -> MOVE {
     ((to_pos(&mv.0) as MOVE) << 8) | to_pos(&mv.1) as MOVE
 }
 

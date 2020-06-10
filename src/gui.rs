@@ -7,16 +7,10 @@ use sdl2::EventPump;
 use sdl2::image::LoadTexture;
 use std::time::Duration;
 use crate::chess::*;
-use crate::board::Board;
-use crate::ai::*;
+use crate::board::*;
+use crate::player::*;
 use std::cell::RefCell;
 use std::rc::Rc;
-
-pub type POS = u8;
-pub type MOVE = u16;
-
-pub const ROW_NUM: usize = 9;
-pub const COL_NUM: usize = 7;
 
 const BOARD_WIDTH: u32 = 500;
 const BOARD_HEIGHT: u32 = 636;
@@ -25,26 +19,6 @@ const CELL_HEIGHT: u32 = 70;
 
 const CHESS_WIDTH: u32 = 64;
 const CHESS_HEIGHT: u32 = 64;
-
-fn get_pos(pos: POS) -> (usize, usize) {
-    ((pos >> 4) as usize, (pos & 0xf) as usize)
-}
-
-fn get_dst_pos(mv: MOVE) -> POS {
-    (mv & 0xff) as POS
-}
-
-pub fn to_pos(pos: &(usize, usize)) -> POS {
-    ((pos.0 << 4) | pos.1) as POS
-}
-
-fn to_move(mv: &((usize, usize), (usize, usize))) -> MOVE {
-    ((to_pos(&mv.0) as MOVE) << 8) | to_pos(&mv.1) as MOVE
-}
-
-pub trait Player {
-    fn get_move(&mut self) -> MOVE;
-}
 
 pub struct Game {
     chesses_textures: Vec<Texture>,

@@ -1,6 +1,6 @@
 mod gui;
 mod chess;
-mod ai;
+mod player;
 mod board;
 
 use gui::*;
