@@ -1,9 +1,4 @@
-mod gui;
-mod chess;
-mod player;
-mod board;
-
-use gui::*;
+use animal_chess_core::gui::*;
 
 const WINDOW_WIDTH: u32 = 500;
 const WINDOW_HEIGHT: u32 = 636;

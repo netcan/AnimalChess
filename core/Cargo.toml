@@ -1,0 +1,22 @@
+[package]
+name = "animal_chess_core"
+version = "0.1.0"
+authors = ["netcan <1469709759@qq.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rand = "0.7.3"
+
+[dev-dependencies]
+criterion = "0.3"
+
+[dependencies.sdl2]
+version = "0.34.0"
+default-features = false
+features = ["image", "unsafe_textures"]
+
+[[bench]]
+name = "core_benmark"
+harness = false

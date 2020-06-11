@@ -19,4 +19,4 @@ cargo run --release
 ## Todo
 - [X] Seperate `game.rs` to `gui.rs` and `board.rs`
 - [ ] Add `Monte Carlo Tree Search` Algorithm
-- [ ] benmark board operation
+- [X] benmark board operation
