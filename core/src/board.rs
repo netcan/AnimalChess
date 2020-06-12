@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use crate::chess::{*, ChessKind::*};
+use crate::chess::{*, ChessKind::*, RoleType::*};
 
 pub type POS = u8;
 pub type MOVE = u16;
@@ -50,17 +50,39 @@ impl Context {
 pub struct Board {
     pub chesses: [[ChessId; COL_NUM]; ROW_NUM],
     pub role: RoleType, // 轮到谁下
+    red_chess_num: usize,
+    black_chess_num: usize,
+    in_den: RoleType,
     ctx: VecDeque<Context>,
 }
 
+enum UpdateChess {
+    ADD,
+    DEC
+}
+
 impl Board {
+    fn update_chess_num(&mut self, chess_id: ChessId, u: UpdateChess) {
+        let chess_num = match chess_id.role {
+            RED => &mut self.red_chess_num,
+            BLACK => &mut self.black_chess_num,
+            _ => return
+        };
+
+        use UpdateChess::*;
+        match u {
+            ADD => *chess_num += 1,
+            DEC => *chess_num -= 1,
+        }
+    }
+
     fn load_fen(&mut self, fen: &str) {
         let fen_u8 = fen.as_bytes();
         let mut fen_idx = 0;
 
         let get_role = |c: u8| -> RoleType {
-            if (c as char).is_lowercase() { RoleType::BLACK }
-            else { RoleType::RED }
+            if (c as char).is_lowercase() { BLACK }
+            else { RED }
         };
 
         let mut pos = 0usize;
@@ -82,36 +104,23 @@ impl Board {
             }
 
             if chess_id != EMPTY_CHESS {
+                self.update_chess_num(chess_id, UpdateChess::ADD);
                 self.chesses[pos / COL_NUM][pos % COL_NUM] = chess_id;
                 pos += 1;
             }
             fen_idx += 1;
         }
         fen_idx += 1; // eat ' '
-        self.role = if fen_u8[fen_idx] == b'w' { RoleType::RED }
-                    else { RoleType::BLACK };
+        self.role = if fen_u8[fen_idx] == b'w' { RED }
+                    else { BLACK };
     }
 
     pub fn check_win(&self) -> RoleType {
-        let (mut red_chess_num, mut black_chess_num) = (0, 0);
+        if self.in_den != RoleType::EMPTY { return self.in_den; }
 
-        for i in 0..ROW_NUM {
-            for j in 0..COL_NUM {
-                let chess_id = self.chesses[i][j];
-                if chess_id == EMPTY_CHESS { continue; }
-
-                if self.check_in_den(to_pos(&(i, j))) { return chess_id.role; }
-
-                if chess_id.role == RoleType::RED {
-                    red_chess_num += 1;
-                } else {
-                    black_chess_num += 1;
-                }
-            }
-        }
-        if red_chess_num * black_chess_num == 0 {
-            if red_chess_num > 0 { return RoleType::RED; }
-            else { return RoleType::BLACK; }
+        if self.red_chess_num * self.black_chess_num == 0 {
+            if self.red_chess_num > 0 { return RED; }
+            else { return BLACK; }
         }
         RoleType::EMPTY
     }
@@ -119,7 +128,10 @@ impl Board {
     pub fn new() -> Self {
         let mut board = Self {
             chesses: [[EMPTY_CHESS; COL_NUM]; ROW_NUM],
-            role: RoleType::RED,
+            role: RED,
+            in_den: RoleType::EMPTY,
+            red_chess_num: 0,
+            black_chess_num: 0,
             ctx: VecDeque::new(),
         };
 
@@ -136,23 +148,28 @@ impl Board {
         self.chesses[src.0][src.1] = EMPTY_CHESS;
 
         self.ctx.push_back(Context::new(eated, mv));
+
+        self.in_den = self.check_in_den(get_dst_pos(mv));
+        self.update_chess_num(eated, UpdateChess::DEC);
+
         self.switch_player()
     }
 
     pub fn undo_move(&mut self) {
         if let Some(context) = self.ctx.pop_back() {
             let (src, dst) = get_move(context.mv);
-
             self.chesses[src.0][src.1] = self.chesses[dst.0][dst.1];
             self.chesses[dst.0][dst.1] = context.eated;
 
+            self.in_den = RoleType::EMPTY;
+            self.update_chess_num(context.eated, UpdateChess::ADD);
             self.switch_player()
         }
     }
 
     fn switch_player(&mut self) {
-        self.role = if self.role == RoleType::RED { RoleType::BLACK }
-                    else { RoleType::RED };
+        self.role = if self.role == RED { BLACK }
+                    else { RED };
     }
 
     fn pos_to_idx(pos: POS) -> usize {
@@ -165,11 +182,12 @@ impl Board {
         BANK & (1 << Self::pos_to_idx(pos)) > 0
     }
 
-    pub fn check_in_den(&self, pos: POS) -> bool {
+    fn check_in_den(&self, pos: POS) -> RoleType {
         let pos_ = get_pos(pos);
         match (self.chesses[pos_.0][pos_.1].role, pos) {
-            (RoleType::RED, BLACK_DEN) | (RoleType::BLACK, RED_DEN) => return true,
-            _ => { return false }
+            (RED, BLACK_DEN) => RED,
+            (BLACK, RED_DEN) => BLACK,
+            _ => { RoleType::EMPTY }
         }
     }
 
@@ -178,7 +196,7 @@ impl Board {
 
         let pos_ = get_pos(pos);
         if TRAP & (1 << Self::pos_to_idx(pos)) > 0 {
-            if self.chesses[pos_.0][pos_.1].role == RoleType::RED {
+            if self.chesses[pos_.0][pos_.1].role == RED {
                 return pos_.0 <= 1;
             } else {
                 return pos_.0 >= 7;
@@ -221,7 +239,7 @@ impl Board {
         {
             let src = get_pos(src);
             match (self.chesses[src.0][src.1].role, dst) {
-                (RoleType::RED, RED_DEN) | (RoleType::BLACK, BLACK_DEN) => return false,
+                (RED, RED_DEN) | (BLACK, BLACK_DEN) => return false,
                 _ => {}
             }
         }
