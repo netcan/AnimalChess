@@ -20,3 +20,6 @@ features = ["image", "unsafe_textures"]
 [[bench]]
 name = "core_benmark"
 harness = false
+
+[lib]
+bench = false

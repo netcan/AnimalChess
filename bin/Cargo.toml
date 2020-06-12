@@ -16,3 +16,8 @@ animal_chess_core = { path = "../core" }
 version = "0.34.0"
 default-features = false
 features = ["image", "unsafe_textures"]
+
+[[bin]]
+name = "animal_chess"
+path = "src/main.rs"
+bench = false
