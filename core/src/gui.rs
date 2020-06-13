@@ -195,6 +195,7 @@ impl Game {
             } else {
                 self.render()?;
                 println!("{:?} wins!", win_status);
+                break;
             }
 
             // time management
