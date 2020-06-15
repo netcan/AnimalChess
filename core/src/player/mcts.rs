@@ -8,17 +8,19 @@ struct Node {
     wins: f32,
     visited: f32,
     action: Vec<MOVE>,
+    mv: MOVE,
     pub untried_moves: Vec<usize>,
     parent: Option<Rc<RefCell<Node>>>,
     children: Vec<Option<Rc<RefCell<Node>>>>,
 }
 
 impl Node {
-    fn new(state: Rc<RefCell<Board>>, parent: Option<Rc<RefCell<Node>>>) -> Self {
+    fn new(state: Rc<RefCell<Board>>, parent: Option<Rc<RefCell<Node>>>, mv: MOVE) -> Self {
         let action = state.borrow().generate_all_steps();
         let mut node = Self {
             wins: 0.0,
             visited: 0.0,
+            mv,
             untried_moves: (0..action.len()).collect(),
             children: vec![None; action.len()],
             action,
@@ -67,7 +69,8 @@ impl MCTSPlayer {
     fn MCTS_Run(&mut self, itermax: usize) -> MOVE {
         let state = self.board.clone();
         let root = Rc::new(RefCell::new(Node::new(
-            state.clone(), None
+            state.clone(), None,
+            0
         )));
 
         for iter in 0..itermax {
@@ -98,6 +101,7 @@ impl MCTSPlayer {
                     steps += 1;
                     let child = Some(Rc::new(RefCell::new(Node::new(
                             state.clone(), node.clone(),
+                            node_.borrow().action[mv_idx]
                     ))));
 
                     node_.borrow_mut().children[mv_idx] = child.clone();
@@ -117,24 +121,30 @@ impl MCTSPlayer {
 
             // backpropagate
             let win_role = state.borrow().check_win();
+            // println!("win_role: {:?} mv = {:?} steps = {} rollout_step = {}", win_role, get_move(node.clone().unwrap().borrow().mv), steps, rollout_step);
+
             for _ in 0..rollout_step {
                 state.borrow_mut().undo_move();
             }
 
-            while node.is_some() && steps > 0 {
+            let mut s = 0;
+            while node.is_some() {
                 let mut result = 0.0f32;
                 if state.borrow().role != win_role {
-                    result = 1.0;
+                    result = 1.0 / (steps + rollout_step) as f32;
                 }
                 node.clone().unwrap().borrow_mut().update(result);
                 node = node.unwrap().borrow_mut().parent.clone();
-                state.borrow_mut().undo_move();
-                steps -= 1;
+                if s < steps {
+                    state.borrow_mut().undo_move();
+                }
+                s += 1;
             }
         }
 
         let mut action_idx = 0;
         let mut max_visited = 0.0;
+
         for (idx, c) in root.borrow().children.iter().enumerate() {
             if let Some(c) = c {
                 let c = c.borrow();
@@ -142,11 +152,12 @@ impl MCTSPlayer {
                     max_visited = c.visited;
                     action_idx = idx;
                 }
-                println!("child({}) wins / visited = {} / {}", idx, c.wins, c.visited);
+                // println!("child({:?}) wins / visited = {} / {}", get_move(c.mv), c.wins, c.visited);
             }
         }
 
         let best_action = root.borrow().action[action_idx];
+        // println!("best_action = {:?}", get_move(best_action));
         best_action
     }
 }
@@ -154,6 +165,6 @@ impl MCTSPlayer {
 
 impl Player for MCTSPlayer {
     fn get_move(&mut self) -> MOVE {
-        self.MCTS_Run(500)
+        self.MCTS_Run(2000)
     }
 }

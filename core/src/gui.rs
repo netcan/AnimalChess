@@ -50,7 +50,7 @@ impl Game {
             chesses_textures: Vec::new(),
             board,
             computer,
-            computer_turn: true,
+            computer_turn: false,
             board_texture: texture_creator.load_texture("assets/board.png").unwrap(),
             selected_frame: texture_creator.load_texture("assets/oos.gif").unwrap(),
             selected_chess: None,
@@ -141,7 +141,7 @@ impl Game {
                 if let Some(_) = self.movable_pos.iter().find(|&&mv| { return get_dst_pos(mv) == to_pos(&dst) }) {
                     let src = self.selected_chess.unwrap();
                     board.move_chess(to_move(&(get_pos(src), dst)));
-                    // self.computer_turn = ! self.computer_turn;
+                    self.computer_turn = ! self.computer_turn;
                 }
                 self.selected_chess = None;
             } else { // must be selected, because role is same as chess
@@ -191,7 +191,7 @@ impl Game {
                 if self.computer_turn && self.board.borrow().check_win() == RoleType::EMPTY {
                     let mv = self.computer.get_move();
                     self.board.borrow_mut().move_chess(mv);
-                    // self.computer_turn = ! self.computer_turn;
+                    self.computer_turn = ! self.computer_turn;
                 }
             } else {
                 self.render()?;

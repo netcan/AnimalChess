@@ -135,7 +135,7 @@ impl Board {
             black_chess_num: 0,
             ctx: Vec::new(),
         };
-        board.load_fen("2L3t/1d3c1/r1p1w1e/7/7/7/E1W1P1R/1C3D1/T3l2 w - - 0 1");
+        board.load_fen("l5t/1d3c1/r1p1w1e/7/7/7/E1W1P1R/1C3D1/T5L w - - 0 1");
 
         board
     }
