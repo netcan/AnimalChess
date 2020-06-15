@@ -1,4 +1,3 @@
-use std::collections::VecDeque;
 use crate::chess::{*, ChessKind::*, RoleType::*};
 
 pub type POS = u8;
@@ -36,6 +35,7 @@ pub fn to_move(mv: &((usize, usize), (usize, usize))) -> MOVE {
     ((to_pos(&mv.0) as MOVE) << 8) | to_pos(&mv.1) as MOVE
 }
 
+#[derive(Clone)]
 struct Context {
     eated: ChessId,
     mv: MOVE,
@@ -47,13 +47,14 @@ impl Context {
     }
 }
 
+#[derive(Clone)]
 pub struct Board {
     pub chesses: [[ChessId; COL_NUM]; ROW_NUM],
     pub role: RoleType, // 轮到谁下
     red_chess_num: usize,
     black_chess_num: usize,
     in_den: RoleType,
-    ctx: VecDeque<Context>,
+    ctx: Vec<Context>,
 }
 
 enum UpdateChess {
@@ -132,22 +133,24 @@ impl Board {
             in_den: RoleType::EMPTY,
             red_chess_num: 0,
             black_chess_num: 0,
-            ctx: VecDeque::new(),
+            ctx: Vec::new(),
         };
-
         board.load_fen("l5t/1d3c1/r1p1w1e/7/7/7/E1W1P1R/1C3D1/T5L w - - 0 1");
 
         board
     }
 
-    pub fn move_chess(&mut self, mv: MOVE) {
+    pub fn move_chess(&mut self, mv: MOVE, save: bool) {
         let (src, dst) = get_move(mv);
 
         let eated = self.chesses[dst.0][dst.1];
         self.chesses[dst.0][dst.1] = self.chesses[src.0][src.1];
         self.chesses[src.0][src.1] = EMPTY_CHESS;
 
-        self.ctx.push_back(Context::new(eated, mv));
+
+        if save {
+            self.ctx.push(Context::new(eated, mv));
+        }
 
         self.in_den = self.check_in_den(get_dst_pos(mv));
         self.update_chess_num(eated, UpdateChess::DEC);
@@ -156,7 +159,7 @@ impl Board {
     }
 
     pub fn undo_move(&mut self) {
-        if let Some(context) = self.ctx.pop_back() {
+        if let Some(context) = self.ctx.pop() {
             let (src, dst) = get_move(context.mv);
             self.chesses[src.0][src.1] = self.chesses[dst.0][dst.1];
             self.chesses[dst.0][dst.1] = context.eated;

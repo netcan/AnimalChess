@@ -8,7 +8,7 @@ fn gen_and_move_chess(max_times: usize) {
     let mut times = 0;
     while times < max_times {
         if let Some(&mv) = board.generate_all_steps().first() {
-            board.move_chess(mv);
+            board.move_chess(mv, false);
         } else {
             break;
         }
@@ -29,7 +29,7 @@ fn self_play() -> usize {
     loop {
         let steps = board.generate_all_steps();
         if steps.is_empty() { break; }
-        board.move_chess(*steps.choose(&mut rand::thread_rng()).unwrap());
+        board.move_chess(*steps.choose(&mut rand::thread_rng()).unwrap(), false);
         step += 1;
     }
 
@@ -39,13 +39,16 @@ fn self_play() -> usize {
 fn self_play_benmark(c: &mut Criterion) {
     let mut steps = 0;
     let mut count = 0;
+    let (mut min_step, mut max_step) = (usize::MAX, 0);
     c.bench_function("self_play_benmark", |b| {
         b.iter(|| {
             steps += self_play();
             count += 1;
+            min_step = min_step.min(steps);
+            max_step = max_step.max(steps);
         });
     });
-    println!("average {}/{}={} steps to end", steps, count, steps / count);
+    println!("average {}/{}={} steps to end, min_step = {}, max_step = {}", steps, count, steps / count, min_step, max_step);
 }
 
 criterion_group!(benches, gen_and_move_benmark, self_play_benmark);
