@@ -186,7 +186,7 @@ impl AlphaBeta {
         let mut best_move: Option<MOVE> = None;
 
         for mv in self.generate_all_steps() {
-            self.board.borrow_mut().move_chess(mv, true);
+            self.board.borrow_mut().move_chess(mv);
             let score = -self.alpha_beta(cur_depth + 1, depth, -beta, -alpha);
             self.board.borrow_mut().undo_move();
 
