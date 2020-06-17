@@ -140,7 +140,7 @@ impl Board {
         board
     }
 
-    pub fn move_chess(&mut self, mv: MOVE, save: bool) {
+    pub fn move_chess(&mut self, mv: MOVE) {
         let (src, dst) = get_move(mv);
 
         let eated = self.chesses[dst.0][dst.1];
@@ -148,9 +148,7 @@ impl Board {
         self.chesses[src.0][src.1] = EMPTY_CHESS;
 
 
-        if save {
-            self.ctx.push(Context::new(eated, mv));
-        }
+        self.ctx.push(Context::new(eated, mv));
 
         self.in_den = self.check_in_den(get_dst_pos(mv));
         self.update_chess_num(eated, UpdateChess::DEC);

@@ -1,5 +1,3 @@
-use sdl2::render::{Texture, TextureCreator};
-use sdl2::image::LoadTexture;
 use std::slice::Iter;
 
 #[derive(PartialEq, Copy, Clone, Debug)]
@@ -70,29 +68,6 @@ impl ChessId {
         }
     }
 
-    pub fn get_chess_texture<T>(self, texture_creator: &TextureCreator<T>) -> Texture {
-        let mut path = String::from("assets/");
-        use RoleType::*;
-        use ChessKind::*;
-        match self.role {
-            RED   => { path.push('r'); }
-            BLACK => { path.push('b'); }
-            _     => { unreachable!(); }
-        }
-        match self.kind {
-            ELEPHANT => { path.push_str("e.png"); }
-            LION     => { path.push_str("l.png"); }
-            TIGER    => { path.push_str("t.png"); }
-            PANTHER  => { path.push_str("p.png"); }
-            WOLF     => { path.push_str("w.png"); }
-            DOG      => { path.push_str("d.png"); }
-            CAT      => { path.push_str("c.png"); }
-            RAT      => { path.push_str("r.png"); }
-            _        => { unreachable!();         }
-        }
-
-        texture_creator.load_texture(path).expect("load texture failed")
-    }
 }
 
 pub const EMPTY_CHESS: ChessId = ChessId { kind: ChessKind::EMPTY, role: RoleType::EMPTY };

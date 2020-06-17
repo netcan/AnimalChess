@@ -1,6 +1,5 @@
 ## Animal Chess
 Animal Fight Chess Game（斗兽棋） written in rust.
-
 ![assets/animal_chess.png](assets/animal_chess.png)
 
 ## How To Play
@@ -10,13 +9,22 @@ See rules:
 - [https://en.wikipedia.org/wiki/Jungle_(board_game)](https://en.wikipedia.org/wiki/Jungle_(board_game)).
 
 ## How To Run
+It need rust nightly version.
 ```
-git clone https://github.com/netcan/AnimalChess.git
-cd AnimalChess
-cargo run --release
+$ rustup default nightly
+```
+
+```
+$ git clone https://github.com/netcan/AnimalChess.git
+$ cd AnimalChess
+$ cargo run --release
 ```
 
 ## Todo
 - [X] Seperate `game.rs` to `gui.rs` and `board.rs`
-- [ ] Add `Monte Carlo Tree Search` Algorithm
+- [x] Add `Monte Carlo Tree Search` Algorithm
 - [X] benmark board operation
+- [ ] export module for python3
+- [ ] encode/decode move
+- [ ] generate fen
+- [ ] patch sdl2 to support `load_texture` from buffer

@@ -1,4 +1,5 @@
-use sdl2::render::{Texture, WindowCanvas};
+use sdl2::render::{Texture, WindowCanvas, TextureCreator};
+use sdl2::image::LoadTexture;
 use sdl2::rect::Rect;
 use sdl2::video::Window;
 use sdl2::event::Event;
@@ -8,7 +9,7 @@ use sdl2::image::LoadTexture;
 use std::time::Duration;
 use crate::chess::*;
 use crate::board::*;
-use crate::player::*;
+use animal_chess_core::player::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -31,6 +32,30 @@ pub struct Game {
     selected_chess: Option<POS>,
     selected_frame: Texture,
     movable_pos: Vec<MOVE>,
+}
+
+fn get_chess_texture<T>(chess: ChessId, texture_creator: &TextureCreator<T>) -> Texture {
+    let mut path = String::from("assets/");
+    use RoleType::*;
+    use ChessKind::*;
+    match chess.role {
+        RED   => { path.push('r'); }
+        BLACK => { path.push('b'); }
+        _     => { unreachable!(); }
+    }
+    match chess.kind {
+        ELEPHANT => { path.push_str("e.png"); }
+        LION     => { path.push_str("l.png"); }
+        TIGER    => { path.push_str("t.png"); }
+        PANTHER  => { path.push_str("p.png"); }
+        WOLF     => { path.push_str("w.png"); }
+        DOG      => { path.push_str("d.png"); }
+        CAT      => { path.push_str("c.png"); }
+        RAT      => { path.push_str("r.png"); }
+        _        => { unreachable!();         }
+    }
+
+    texture_creator.load_texture(path).expect("load texture failed")
 }
 
 impl Game {
@@ -61,7 +86,7 @@ impl Game {
         for role in RoleType::iter() {
             for kind in ChessKind::iter() {
                 game.chesses_textures.push(
-                    ChessId { role: *role, kind: *kind }.get_chess_texture(&texture_creator)
+                    get_chess_texture(ChessId { role: *role, kind: *kind }, &texture_creator)
                 );
             }
         }
@@ -139,7 +164,7 @@ impl Game {
                 // may be move
                 if let Some(_) = self.movable_pos.iter().find(|&&mv| { return get_dst_pos(mv) == to_pos(&dst) }) {
                     let src = self.selected_chess.unwrap();
-                    board.move_chess(to_move(&(get_pos(src), dst)), true);
+                    board.move_chess(to_move(&(get_pos(src), dst)));
                     self.computer_turn = ! self.computer_turn;
                 }
                 self.selected_chess = None;
@@ -189,7 +214,7 @@ impl Game {
                 self.render()?;
                 if self.computer_turn && self.board.borrow().check_win() == RoleType::EMPTY {
                     let mv = self.computer.get_move();
-                    self.board.borrow_mut().move_chess(mv, true);
+                    self.board.borrow_mut().move_chess(mv);
                     self.computer_turn = ! self.computer_turn;
                 }
             } else {

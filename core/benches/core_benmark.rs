@@ -8,7 +8,7 @@ fn gen_and_move_chess(max_times: usize) {
     let mut times = 0;
     while times < max_times {
         if let Some(&mv) = board.generate_all_steps().first() {
-            board.move_chess(mv, false);
+            board.move_chess(mv);
         } else {
             break;
         }
@@ -29,7 +29,7 @@ fn self_play() -> usize {
     loop {
         let steps = board.generate_all_steps();
         if steps.is_empty() { break; }
-        board.move_chess(*steps.choose(&mut rand::thread_rng()).unwrap(), false);
+        board.move_chess(*steps.choose(&mut rand::thread_rng()).unwrap());
         step += 1;
     }
 
