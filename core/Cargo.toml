@@ -12,6 +12,10 @@ rand = "0.7.3"
 [dev-dependencies]
 criterion = "0.3"
 
+[dependencies.pyo3]
+version = "0.10.1"
+features = ["extension-module"]
+
 [[bench]]
 name = "core_benmark"
 harness = false

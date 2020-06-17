@@ -10,10 +10,13 @@ See rules:
 
 ## How To Run
 It need rust nightly version.
+
+### Prerequisite
 ```
 $ rustup default nightly
 ```
 
+### Play
 ```
 $ git clone https://github.com/netcan/AnimalChess.git
 $ cd AnimalChess
