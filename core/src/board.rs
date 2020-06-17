@@ -77,7 +77,7 @@ impl Board {
         }
     }
 
-    fn load_fen(&mut self, fen: &str) {
+    pub fn load_fen(&mut self, fen: &str) {
         let fen_u8 = fen.as_bytes();
         let mut fen_idx = 0;
 
@@ -114,6 +114,9 @@ impl Board {
         fen_idx += 1; // eat ' '
         self.role = if fen_u8[fen_idx] == b'w' { RED }
                     else { BLACK };
+
+        // TODO: in_den check
+        self.ctx.clear();
     }
 
     pub fn check_win(&self) -> RoleType {
@@ -192,7 +195,7 @@ impl Board {
         }
     }
 
-    pub fn check_in_traps(&self, pos: POS) -> bool {
+    fn check_in_traps(&self, pos: POS) -> bool {
         const TRAP: u64 = 0x1410000000000414;
 
         let pos_ = get_pos(pos);

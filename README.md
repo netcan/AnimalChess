@@ -30,4 +30,5 @@ $ cargo run --release
 - [ ] export module for python3
 - [ ] encode/decode move
 - [ ] generate fen
+- [ ] show board
 - [ ] patch sdl2 to support `load_texture` from buffer
