@@ -5,7 +5,6 @@ use sdl2::video::Window;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::EventPump;
-use sdl2::image::LoadTexture;
 use std::time::Duration;
 use crate::chess::*;
 use crate::board::*;

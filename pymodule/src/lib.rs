@@ -1,19 +1,18 @@
-use crate::board::Board as Brd;
-use crate::board::{ROW_NUM, COL_NUM, MOVE};
-use crate::chess::*;
+use animal_chess_core::board::Board as Brd;
+use animal_chess_core::board::MOVE;
+use animal_chess_core::chess::*;
 use pyo3::prelude::*;
-use pyo3::types::PyTuple;
-use pyo3::wrap_pyfunction;
 
 #[pyclass]
 struct Board {
     board: Brd
 }
 
-
 #[pyclass]
 struct Role { }
 
+/// Role type, which has two constanst value: RED and BLACK
+/// for Board::check_win() to get win roles, None if current nobody wins.
 #[pymethods]
 impl Role {
     #[classattr]
@@ -57,9 +56,9 @@ impl Board {
     }
 }
 
+/// This module is wrap animal chess board to python3, for reinforcement learning training.
 #[pymodule]
-/// A Python module implemented in Rust.
-fn animal_chess_core(_py: Python, m: &PyModule) -> PyResult<()> {
+fn animal_chess_pymodule(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Role>()?;
     m.add_class::<Board>()?;
 

@@ -1,0 +1,15 @@
+[package]
+name = "animal_chess_pymodule"
+version = "0.1.0"
+authors = ["netcan <1469709759@qq.com>"]
+edition = "2018"
+
+[dependencies]
+animal_chess_core = { path = "../core" }
+
+[dependencies.pyo3]
+version = "0.10.1"
+features = ["extension-module"]
+
+[lib]
+crate-type=["cdylib"]
