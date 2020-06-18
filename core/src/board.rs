@@ -7,8 +7,9 @@ pub type ScoreType = i32;
 pub const ROW_NUM: usize = 9;
 pub const COL_NUM: usize = 7;
 
-const RED_DEN:   POS = 0x83;
-const BLACK_DEN: POS = 0x3;
+pub const RED_DEN:   POS = 0x83;
+pub const BLACK_DEN: POS = 0x3;
+pub const TRAP: u64 = 0x1410000000000414;
 
 pub fn get_pos(pos: POS) -> (usize, usize) {
     ((pos >> 4) as usize, (pos & 0xf) as usize)
@@ -196,8 +197,6 @@ impl Board {
     }
 
     fn check_in_traps(&self, pos: POS) -> bool {
-        const TRAP: u64 = 0x1410000000000414;
-
         let pos_ = get_pos(pos);
         if TRAP & (1 << Self::pos_to_idx(pos)) > 0 {
             if self.chesses[pos_.0][pos_.1].role == RED {

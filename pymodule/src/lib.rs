@@ -1,6 +1,7 @@
 use animal_chess_core::board::Board as Brd;
-use animal_chess_core::board::MOVE;
-use animal_chess_core::chess::*;
+use animal_chess_core::board::{MOVE, ROW_NUM, COL_NUM, to_pos, RED_DEN, BLACK_DEN, TRAP};
+use animal_chess_core::chess::{*, ChessKind::*};
+use pyo3::class::basic::PyObjectProtocol;
 use pyo3::prelude::*;
 
 #[pyclass]
@@ -16,12 +17,10 @@ struct Role { }
 #[pymethods]
 impl Role {
     #[classattr]
-    #[name = "RED"]
-    fn red() -> i32 { 0 }
+    const RED: i32 = 0;
 
     #[classattr]
-    #[name = "BLACK"]
-    fn black() -> i32 { 1 }
+    const BLACK: i32 = 1;
 }
 
 #[pymethods]
@@ -34,13 +33,11 @@ impl Board {
     }
 
     fn check_win(&self) -> PyResult<Option<i32>> {
-        Ok(
-            match self.board.check_win() {
-                RoleType::RED => Some(Role::red()),
-                RoleType::BLACK => Some(Role::black()),
-                _ => None
-            }
-        )
+        Ok(match self.board.check_win() {
+            RoleType::RED => Some(Role::RED),
+            RoleType::BLACK => Some(Role::BLACK),
+            _ => None
+        })
     }
 
     fn generate_all_steps(&self) -> PyResult<Vec<MOVE>> {
@@ -53,6 +50,74 @@ impl Board {
 
     fn undo_move(&mut self) -> PyResult<()> {
         Ok(self.board.undo_move())
+    }
+}
+
+
+#[pyproto]
+impl<'a> PyObjectProtocol<'a> for Board {
+    fn __repr__(&'a self) -> PyResult<String>
+    {
+        let mut rep = String::new();
+        const RED_COLOR: &'static str = "\x1b[31m";
+        const BLACK_COLOR: &'static str = "\x1b[37m"; // use white color instead
+
+        for i in 0..ROW_NUM {
+            for j in 0..COL_NUM {
+                let ChessId {role, kind} = self.board.chesses[i][j];
+                let mut color: &str = "";
+
+                let mut k = if i >= 3 && i <= 5 && j % 3 != 0 {
+                    '~'
+                } else {
+                    ' '
+                };
+
+                if (TRAP & (1 << (i * COL_NUM + j) as u64)) > 0 {
+                    color = if i <= 1 { BLACK_COLOR } else { RED_COLOR };
+                    k = '#';
+                }
+
+                match to_pos(&(i, j)) {
+                    RED_DEN => {
+                        k = '@';
+                        color = RED_COLOR;
+                    }
+                    BLACK_DEN => {
+                        k = '@';
+                        color = BLACK_COLOR;
+                    }
+                    _ => {}
+                };
+
+                k = match kind {
+                    ELEPHANT => 'E',
+                    LION     => 'L',
+                    TIGER    => 'T',
+                    PANTHER  => 'P',
+                    WOLF     => 'W',
+                    DOG      => 'D',
+                    CAT      => 'C',
+                    RAT      => 'R',
+                    _        => k,
+                };
+
+                match role {
+                    RoleType::RED => {
+                        rep += &format!("{}{}\x1b[0m", RED_COLOR, k);
+                    },
+                    RoleType::BLACK => {
+                        rep += &format!("{}\x1b[37m{}\x1b[0m", BLACK_COLOR, k.to_lowercase());
+                    }
+                    _ => {
+                        rep += &format!("{}{}\x1b[0m", color, k);
+                    }
+                };
+            }
+            rep.push('\n');
+        }
+
+        Ok(rep)
     }
 }
 
