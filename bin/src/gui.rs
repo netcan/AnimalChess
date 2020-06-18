@@ -68,7 +68,8 @@ impl Game {
         let texture_creator = canvas.texture_creator();
 
         let board = Rc::new(RefCell::new(Board::new()));
-        let computer = Box::new(AlphaBeta::new(board.clone()));
+        // let computer = Box::new(AlphaBeta::new(board.clone()));
+        let computer = Box::new(MCTSPlayer::new(board.clone()));
         let mut game = Game {
             chesses_textures: Vec::new(),
             board,
