@@ -30,7 +30,7 @@ impl Node {
         node
     }
 
-    fn UCT_SelectChild(&self) -> usize {
+    fn uct_select_child(&self) -> usize {
         let mut action_idx = 0;
         let mut max_uct_value = 0.0;
         for (idx, c) in self.children.iter().enumerate() {
@@ -66,24 +66,24 @@ impl MCTSPlayer {
         }
     }
 
-    fn MCTS_Run(&mut self, itermax: usize) -> MOVE {
+    fn mcts_run(&mut self, itermax: usize) -> MOVE {
         let state = self.board.clone();
         let root = Rc::new(RefCell::new(Node::new(
             state.clone(), None,
             0
         )));
 
-        for iter in 0..itermax {
+        for _iter in 0..itermax {
             let mut node = Some(root.clone());
             let mut steps = 0;
-            // println!("iter: {} action.len={}", iter, root.borrow().action.len());
+            // println!("iter: {} action.len={}", _iter, root.borrow().action.len());
 
             // select
             {
                 while node.clone().unwrap().borrow().untried_moves.is_empty() &&
                     ! node.clone().unwrap().borrow().children.is_empty()
                 {
-                    let best_move_idx = node.clone().unwrap().borrow().UCT_SelectChild();
+                    let best_move_idx = node.clone().unwrap().borrow().uct_select_child();
                     state.borrow_mut().move_chess(node.clone().unwrap().borrow().action[best_move_idx]);
                     steps += 1;
 
@@ -121,7 +121,7 @@ impl MCTSPlayer {
 
             // backpropagate
             let win_role = state.borrow().check_win();
-            // println!("win_role: {:?} mv = {:?} steps = {} rollout_step = {}", win_role, get_move(node.clone().unwrap().borrow().mv), steps, rollout_step);
+            // println!("win_role: {:?} steps = {} rollout_step = {}", win_role, steps, rollout_step);
 
             for _ in 0..rollout_step {
                 state.borrow_mut().undo_move();
@@ -165,6 +165,6 @@ impl MCTSPlayer {
 
 impl Player for MCTSPlayer {
     fn get_move(&mut self) -> MOVE {
-        self.MCTS_Run(2000)
+        self.mcts_run(500)
     }
 }

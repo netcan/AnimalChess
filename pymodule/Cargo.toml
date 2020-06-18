@@ -12,4 +12,5 @@ version = "0.10.1"
 features = ["extension-module"]
 
 [lib]
+bench = false
 crate-type=["cdylib"]
