@@ -5,14 +5,12 @@ use rand::seq::SliceRandom;
 #[inline]
 fn gen_and_move_chess(max_times: usize) {
     let mut board = Board::new();
-    let mut times = 0;
-    while times < max_times {
+    for _ in 0..max_times {
         if let Some(&mv) = board.generate_all_steps().first() {
             board.move_chess(mv);
         } else {
             break;
         }
-        times += 1;
     }
 }
 

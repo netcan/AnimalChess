@@ -79,6 +79,7 @@ impl Board {
     }
 
     pub fn load_fen(&mut self, fen: &str) {
+        self.chesses = [[EMPTY_CHESS; COL_NUM]; ROW_NUM];
         let fen_u8 = fen.as_bytes();
         let mut fen_idx = 0;
 
