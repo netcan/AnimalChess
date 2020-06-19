@@ -26,15 +26,17 @@ impl Role {
 #[pymethods]
 impl Board {
     #[new]
-    fn new(fen: &str) -> Self {
+    fn new(fen: Option<&str>) -> Self {
         let mut board = Brd::new();
-        board.load_fen(fen);
+        if let Some(fen) = fen {
+            board.load_fen(fen);
+        }
         Self { board }
     }
 
     fn check_win(&self) -> PyResult<Option<i32>> {
         Ok(match self.board.check_win() {
-            RoleType::RED => Some(Role::RED),
+            RoleType::RED   => Some(Role::RED),
             RoleType::BLACK => Some(Role::BLACK),
             _ => None
         })
