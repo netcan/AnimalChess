@@ -7,8 +7,10 @@
     > Created Time: 2020-06-20 19:24
 ************************************************************************/
 
-use animal_chess_core::board::Board as Brd;
-use animal_chess_core::board::{MOVE, ROW_NUM, COL_NUM, to_pos, RED_DEN, BLACK_DEN, TRAP};
+use animal_chess_core::board::{
+    Board as Brd, MOVE, ROW_NUM, COL_NUM,
+    get_move, to_pos, RED_DEN, BLACK_DEN, TRAP
+};
 use animal_chess_core::chess::{*, ChessKind::*};
 use pyo3::class::basic::PyObjectProtocol;
 use pyo3::prelude::*;
@@ -51,26 +53,24 @@ impl Board {
         }
     }
 
-    fn generate_all_steps(&self) -> Vec<MOVE> {
-        self.board.generate_all_steps()
+    /// generate_all_steps, each step be encoded to [0, 252)
+    fn generate_all_steps(&self) -> Vec<u8> {
+        self.board.generate_all_steps().into_iter().map(|mv| {
+            self.board.encode_move(mv)
+        }).collect()
     }
 
-    fn move_chess(&mut self, mv: MOVE) {
-        self.board.move_chess(mv)
+    fn move_chess(&mut self, mv: u8) {
+        self.board.move_chess(self.board.decode_move(mv))
     }
 
     fn undo_move(&mut self) {
         self.board.undo_move()
     }
 
-    /// encode move at current status, range [0, 252)
-    fn encode_move(&self, mv: MOVE) -> u8 {
-        self.board.encode_move(mv)
-    }
-
     /// decode move at current status
-    fn decode_move(&self, idx: u8) -> MOVE {
-        self.board.decode_move(idx)
+    fn decode_move(&self, idx: u8) -> ((usize, usize), (usize, usize))  {
+        get_move(self.board.decode_move(idx))
     }
 
     /// encode board by 2-value matrix: (16, 9, 7)
@@ -78,7 +78,6 @@ impl Board {
         self.board.encode_board()
     }
 }
-
 
 #[pyproto]
 impl<'a> PyObjectProtocol<'a> for Board {
