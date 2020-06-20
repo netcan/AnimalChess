@@ -43,24 +43,39 @@ impl Board {
         Self { board }
     }
 
-    fn check_win(&self) -> PyResult<Option<i32>> {
-        Ok(match self.board.check_win() {
+    fn check_win(&self) -> Option<i32> {
+        match self.board.check_win() {
             RoleType::RED   => Some(Role::RED),
             RoleType::BLACK => Some(Role::BLACK),
             _ => None
-        })
+        }
     }
 
-    fn generate_all_steps(&self) -> PyResult<Vec<MOVE>> {
-        Ok(self.board.generate_all_steps())
+    fn generate_all_steps(&self) -> Vec<MOVE> {
+        self.board.generate_all_steps()
     }
 
-    fn move_chess(&mut self, mv: MOVE) -> PyResult<()> {
-        Ok(self.board.move_chess(mv))
+    fn move_chess(&mut self, mv: MOVE) {
+        self.board.move_chess(mv)
     }
 
-    fn undo_move(&mut self) -> PyResult<()> {
-        Ok(self.board.undo_move())
+    fn undo_move(&mut self) {
+        self.board.undo_move()
+    }
+
+    /// encode move at current status, range [0, 252)
+    fn encode_move(&self, mv: MOVE) -> u8 {
+        self.board.encode_move(mv)
+    }
+
+    /// decode move at current status
+    fn decode_move(&self, idx: u8) -> MOVE {
+        self.board.decode_move(idx)
+    }
+
+    /// encode board by 2-value matrix: (16, 9, 7)
+    fn encode_board(&self) -> Vec<Vec<Vec<u8>>> {
+        self.board.encode_board()
     }
 }
 

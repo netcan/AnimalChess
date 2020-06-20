@@ -377,4 +377,17 @@ impl Board {
 
         to_move(&(src, dst))
     }
+
+    pub fn encode_board(&self) -> Vec<Vec<Vec<u8>>>{
+        // (16, 9, 7)
+        let mut encoded = vec![vec![vec![0; COL_NUM]; ROW_NUM]; 16];
+        for i in 0..ROW_NUM {
+            for j in 0..COL_NUM {
+                let chess_id = self.chesses[i][j];
+                if chess_id == EMPTY_CHESS { continue; }
+                encoded[chess_id.get_chess_idx()][i][j] = 1;
+            }
+        }
+        encoded
+    }
 }
