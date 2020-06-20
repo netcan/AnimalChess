@@ -1,3 +1,12 @@
+/*************************************************************************
+    > File Name: chess.rs
+    > Author: Netcan
+    > Descripton: Chess Define
+    > Blog: http://www.netcan666.com
+    > Mail: 1469709759@qq.com
+    > Created Time: 2020-06-20 19:23
+************************************************************************/
+
 use std::slice::Iter;
 
 #[derive(PartialEq, Copy, Clone, Debug)]

@@ -1,3 +1,12 @@
+/*************************************************************************
+    > File Name: main.rs
+    > Author: Netcan
+    > Descripton: AnimalChess main
+    > Blog: http://www.netcan666.com
+    > Mail: 1469709759@qq.com
+    > Created Time: 2020-06-20 19:24
+************************************************************************/
+
 use animal_chess_core::*;
 mod gui;
 use gui::*;

@@ -1,3 +1,12 @@
+/*************************************************************************
+    > File Name: gui.rs
+    > Author: Netcan
+    > Descripton: AnimalChess Gui
+    > Blog: http://www.netcan666.com
+    > Mail: 1469709759@qq.com
+    > Created Time: 2020-06-20 19:24
+************************************************************************/
+
 use sdl2::render::{Texture, WindowCanvas, TextureCreator};
 use sdl2::image::LoadTexture;
 use sdl2::rect::Rect;

@@ -1,3 +1,12 @@
+/*************************************************************************
+    > File Name: board.rs
+    > Author: Netcan
+    > Descripton: Board impl
+    > Blog: http://www.netcan666.com
+    > Mail: 1469709759@qq.com
+    > Created Time: 2020-06-20 19:23
+************************************************************************/
+
 use crate::chess::{*, ChessKind::*, RoleType::*};
 use std::cmp::Ordering;
 
@@ -150,7 +159,6 @@ impl Board {
 
     pub fn move_chess(&mut self, mv: MOVE) {
         let (src, dst) = get_move(mv);
-
         let eated = self.chesses[dst.0][dst.1];
         self.chesses[dst.0][dst.1] = self.chesses[src.0][src.1];
         self.chesses[src.0][src.1] = EMPTY_CHESS;
@@ -280,10 +288,9 @@ impl Board {
         let mut basic_steps = self.generate_basic_steps(src, false);
         let src_ = get_pos(src);
         if Self::check_at_bank(src) {
-            // [2, 6]
-            if (src_.0 + 2) % 4 == 0 {
+            if (src_.0 + 2) % 4 == 0 { // up or down
                 basic_steps.push(to_move(&(src_, ((src_.0 + 4) % 8, src_.1))));
-            } else {
+            } else { // left or right
                 if src_.1 % 6 == 0 {
                     basic_steps.push(to_move(&(src_, (src_.0, 3))));
                 } else {
@@ -333,29 +340,46 @@ impl Board {
             }
         };
 
-        let dxy = (sign(src.0 as i8 - dst.0 as i8),
-                    sign(src.1 as i8 - dst.1 as i8));
+        let dxy = (sign(dst.0 as i8 - src.0 as i8),
+                    sign(dst.1 as i8 - src.1 as i8));
         let idx = Self::DXY.iter().position(|&dxy_| dxy_ == dxy).expect("dx * dy == 0!");
 
-        (src.0 * COL_NUM * 4 + src.1 * 4 + idx) as u8
+        let encode = (idx * ROW_NUM * COL_NUM + src.0 * COL_NUM + src.1) as u8;
+        encode
     }
 
     pub fn decode_move(&self, idx: u8) -> MOVE {
         let idx = idx as usize;
 
-        let src = (idx / COL_NUM / 4, (idx % COL_NUM) / 4);
-        let idx = idx % 4;
-        let mut dst = src;
+        let src = ((idx / COL_NUM) % ROW_NUM, idx % COL_NUM);
+        let idx = idx / COL_NUM / ROW_NUM;
 
-        match self.chesses[src.0][src.1].kind {
-            TIGER | LION if Self::check_at_bank(to_pos(&src)) => {
-
-            }
-            _ => {
-                dst = ( (src.0 as i8 + Self::DXY[idx].0) as usize,
+        let mut dst = ( (src.0 as i8 + Self::DXY[idx].0) as usize,
                         (src.1 as i8 + Self::DXY[idx].1) as usize);
+
+        if (self.chesses[src.0][src.1].kind == TIGER ||
+            self.chesses[src.0][src.1].kind == LION) &&
+            Self::check_at_bank(to_pos(&src)) {
+                if (src.0 + 2) % 4 == 0 { // up or down
+                    if src.0 == 2 && Self::DXY[idx].0 > 0 {
+                        dst.0 = 6;
+                    } else if src.0 == 6 && Self::DXY[idx].0 < 0 {
+                        dst.0 = 2;
+                    }
+                } else { // left or right
+                    if Self::DXY[idx].1 != 0 {
+                        if src.1 % 6 == 0 {
+                            dst.1 = 3;
+                        } else {
+                            if Self::DXY[idx].1 < 0 {
+                                dst.1 = 0;
+                            } else {
+                                dst.1 = 6;
+                            }
+                        }
+                    }
+                }
             }
-        }
 
         to_move(&(src, dst))
     }

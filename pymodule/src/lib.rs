@@ -1,3 +1,12 @@
+/*************************************************************************
+    > File Name: lib.rs
+    > Author: Netcan
+    > Descripton: Wrapper Python module
+    > Blog: http://www.netcan666.com
+    > Mail: 1469709759@qq.com
+    > Created Time: 2020-06-20 19:24
+************************************************************************/
+
 use animal_chess_core::board::Board as Brd;
 use animal_chess_core::board::{MOVE, ROW_NUM, COL_NUM, to_pos, RED_DEN, BLACK_DEN, TRAP};
 use animal_chess_core::chess::{*, ChessKind::*};

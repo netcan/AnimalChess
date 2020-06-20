@@ -3,5 +3,8 @@
 members = [
     "bin",
     "core",
-    "pymodule"
+]
+
+exclude = [
+    "pymodule",
 ]
