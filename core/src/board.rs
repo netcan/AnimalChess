@@ -1,4 +1,5 @@
 use crate::chess::{*, ChessKind::*, RoleType::*};
+use std::cmp::Ordering;
 
 pub type POS = u8;
 pub type MOVE = u16;
@@ -64,6 +65,8 @@ enum UpdateChess {
 }
 
 impl Board {
+    // down, right, up, left
+    const DXY: [(i8, i8); 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
     fn update_chess_num(&mut self, chess_id: ChessId, u: UpdateChess) {
         let chess_num = match chess_id.role {
             RED => &mut self.red_chess_num,
@@ -260,13 +263,11 @@ impl Board {
     }
 
     fn generate_basic_steps(&self, src: POS, to_water: bool) -> Vec<MOVE> {
-        const DX: [i32; 4] = [1, 0, -1, 0];
-        const DY: [i32; 4] = [0, 1, 0, -1];
         let src_ = get_pos(src);
-        let (x, y) = (src_.0 as i32, src_.1 as i32);
+        let (x, y) = (src_.0 as i8, src_.1 as i8);
 
         (0..4).into_iter().map(|idx| {
-            to_move(&(get_pos(src), ((x + DX[idx]) as usize, (y + DY[idx]) as usize)))
+            to_move(&(get_pos(src), ((x + Self::DXY[idx].0) as usize, (y + Self::DXY[idx].1) as usize)))
         }).filter(|&mv| {
             let (_, dst) = get_move(mv);
             dst.0 < ROW_NUM && dst.1 < COL_NUM &&
@@ -320,5 +321,42 @@ impl Board {
             TIGER | LION => { self.generate_tl_steps(pos)           }
             _ =>            { self.generate_basic_steps(pos, false) }
         }
+    }
+
+    pub fn encode_move(&self, mv: MOVE) -> u8 {
+        let (src, dst) = get_move(mv);
+        let sign = |x: i8| {
+            match x.cmp(&0) {
+                Ordering::Less => { -1 },
+                Ordering::Equal => { 0 },
+                Ordering::Greater => { 1 }
+            }
+        };
+
+        let dxy = (sign(src.0 as i8 - dst.0 as i8),
+                    sign(src.1 as i8 - dst.1 as i8));
+        let idx = Self::DXY.iter().position(|&dxy_| dxy_ == dxy).expect("dx * dy == 0!");
+
+        (src.0 * COL_NUM * 4 + src.1 * 4 + idx) as u8
+    }
+
+    pub fn decode_move(&self, idx: u8) -> MOVE {
+        let idx = idx as usize;
+
+        let src = (idx / COL_NUM / 4, (idx % COL_NUM) / 4);
+        let idx = idx % 4;
+        let mut dst = src;
+
+        match self.chesses[src.0][src.1].kind {
+            TIGER | LION if Self::check_at_bank(to_pos(&src)) => {
+
+            }
+            _ => {
+                dst = ( (src.0 as i8 + Self::DXY[idx].0) as usize,
+                        (src.1 as i8 + Self::DXY[idx].1) as usize);
+            }
+        }
+
+        to_move(&(src, dst))
     }
 }
