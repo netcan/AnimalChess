@@ -95,10 +95,10 @@ T #@# L
 - [x] Seperate `game.rs` to `gui.rs` and `board.rs`
 - [x] Add `Monte Carlo Tree Search` Algorithm
 - [x] benmark board operation
-- [ ] export module for python3
+- [x] export module for python3
 - [ ] add some test
-- [ ] benmark pymodule
-- [ ] encode/decode move
+- [x] benmark pymodule
+- [x] encode/decode move
 - [ ] generate fen
 - [x] repr board
 - [ ] patch sdl2 to support `load_texture` from buffer

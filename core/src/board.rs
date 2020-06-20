@@ -163,7 +163,6 @@ impl Board {
         self.chesses[dst.0][dst.1] = self.chesses[src.0][src.1];
         self.chesses[src.0][src.1] = EMPTY_CHESS;
 
-
         self.ctx.push(Context::new(eated, mv));
 
         self.in_den = self.check_in_den(get_dst_pos(mv));
@@ -361,22 +360,17 @@ impl Board {
             self.chesses[src.0][src.1].kind == LION) &&
             Self::check_at_bank(to_pos(&src)) {
                 if (src.0 + 2) % 4 == 0 { // up or down
-                    if src.0 == 2 && Self::DXY[idx].0 > 0 {
-                        dst.0 = 6;
-                    } else if src.0 == 6 && Self::DXY[idx].0 < 0 {
-                        dst.0 = 2;
+                    if Self::DXY[idx].0 != 0 {
+                        let cond = (src.0 == 2) as usize * 2 + (Self::DXY[idx].0 > 0) as usize;
+                        let cond2 = (cond % 3 == 0) as usize;
+                        dst.0 = (4 * cond / 3 + 2) * cond2 +
+                                dst.0 * (1 - cond2);
                     }
+
                 } else { // left or right
                     if Self::DXY[idx].1 != 0 {
-                        if src.1 % 6 == 0 {
-                            dst.1 = 3;
-                        } else {
-                            if Self::DXY[idx].1 < 0 {
-                                dst.1 = 0;
-                            } else {
-                                dst.1 = 6;
-                            }
-                        }
+                        let cond = (src.1 % 6 == 0) as i8;
+                        dst.1 = (cond * 3 + (1 - cond) * ((Self::DXY[idx].1 + 1) * 3)) as usize;
                     }
                 }
             }
