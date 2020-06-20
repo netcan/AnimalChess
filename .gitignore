@@ -5,4 +5,5 @@ Thumbs.db
 flamegraph.svg
 out.user_stacks
 stacks.folded
+.ipynb_checkpoints
 **/*.rs.bk
