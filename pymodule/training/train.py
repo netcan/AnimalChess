@@ -9,5 +9,5 @@ if __name__ == '__main__':
         net.cuda()
     net.eval()
 
-    for iter in tqdm(range(50)):
-        MCTS_self_play(iter, 50, net)
+    for iter in tqdm(range(10)):
+        MCTS_self_play(iter, 10000, net)

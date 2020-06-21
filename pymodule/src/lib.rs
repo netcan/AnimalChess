@@ -53,6 +53,10 @@ impl Board {
         }
     }
 
+    fn get_step_count(&self) -> u8 {
+        self.board.get_step_count()
+    }
+
     fn role(&self) -> i32 {
         match self.board.role {
             RoleType::RED => Role::RED,

@@ -133,6 +133,10 @@ impl Board {
         self.ctx.clear();
     }
 
+    pub fn get_step_count(&self) -> u8 {
+        self.ctx.len() as u8
+    }
+
     pub fn check_win(&self) -> RoleType {
         if self.in_den != RoleType::EMPTY { return self.in_den; }
 
@@ -140,6 +144,7 @@ impl Board {
             if self.red_chess_num > 0 { return RED; }
             else { return BLACK; }
         }
+
         RoleType::EMPTY
     }
 
@@ -152,7 +157,7 @@ impl Board {
             black_chess_num: 0,
             ctx: Vec::new(),
         };
-        board.load_fen("l5t/1d3c1/r1p1w1e/7/7/7/E1W1P1R/1C3D1/T5L w - - 0 1");
+        board.load_fen("l5t/1d3c1/r1p1w1e/7/7/7/E1W1P1R/1C3D1/T5L w 0");
 
         board
     }
@@ -168,7 +173,7 @@ impl Board {
         self.in_den = self.check_in_den(get_dst_pos(mv));
         self.update_chess_num(eated, UpdateChess::DEC);
 
-        self.switch_player()
+        self.switch_player();
     }
 
     pub fn undo_move(&mut self) {
@@ -179,7 +184,7 @@ impl Board {
 
             self.in_den = RoleType::EMPTY;
             self.update_chess_num(context.eated, UpdateChess::ADD);
-            self.switch_player()
+            self.switch_player();
         }
     }
 
@@ -308,6 +313,7 @@ impl Board {
 
     pub fn generate_all_steps(&self) -> Vec<MOVE> {
         if self.check_win() != RoleType::EMPTY { return Vec::new(); }
+
         let mut moves = Vec::new();
         moves.reserve(32);
         for i in 0..ROW_NUM {

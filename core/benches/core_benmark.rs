@@ -30,7 +30,6 @@ fn self_play() -> usize {
         board.move_chess(*steps.choose(&mut rand::thread_rng()).unwrap());
         step += 1;
     }
-
     step
 }
 
@@ -40,10 +39,11 @@ fn self_play_benmark(c: &mut Criterion) {
     let (mut min_step, mut max_step) = (usize::MAX, 0);
     c.bench_function("self_play_benmark", |b| {
         b.iter(|| {
-            steps += self_play();
+            let step = self_play();
+            steps += step;
             count += 1;
-            min_step = min_step.min(steps);
-            max_step = max_step.max(steps);
+            min_step = min_step.min(step);
+            max_step = max_step.max(step);
         });
     });
     println!("average {}/{}={} steps to end, min_step = {}, max_step = {}", steps, count, steps / count, min_step, max_step);

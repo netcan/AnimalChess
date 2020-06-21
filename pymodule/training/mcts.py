@@ -1,6 +1,6 @@
-import torch, math
+import torch, math, os
 import numpy as np
-import pickle, collections, datetime
+import pickle, collections, time
 from tqdm import tqdm
 from animal_chess_pymodule import *
 from alpha_zero_net import ChessNet
@@ -62,11 +62,10 @@ class Node():
             current = current.maybe_add_child(best_move)
         return current
 
-    def add_dirichlet_noise(self, action_idxs, child_priors):
-        valid_child_priors = child_priors[action_idxs] # select only legal moves entries in child_priors array
+    def add_dirichlet_noise(self):
+        valid_child_priors = self.child_priors[self.action_idxes] # select only legal moves entries in child_priors array
         valid_child_priors = 0.75*valid_child_priors + 0.25*np.random.dirichlet(np.zeros([len(valid_child_priors)], dtype=np.float32)+0.3)
-        child_priors[action_idxs] = valid_child_priors
-        return child_priors
+        self.child_priors[self.action_idxes] = valid_child_priors
 
     def expand(self, child_priors):
         self.is_expanded = True
@@ -79,6 +78,9 @@ class Node():
         mask[self.action_idxes] = False
         self.child_priors[mask] = 0.0
 
+        if isinstance(self.parent, DummyNode): # root
+            self.add_dirichlet_noise()
+
     def backup(self, value_estimate: float):
         current = self
         while current.parent is not None:
@@ -88,7 +90,7 @@ class Node():
             elif current.game.role() == Role.RED: # same as current.parent.game.player = 1
                 current.total_value += (-1*value_estimate)
 
-            if not isinstance(current.parent, DummyNode):
+            if not isinstance(current.parent, DummyNode): # root
                 current.game.undo_move()
             current = current.parent
 
@@ -116,7 +118,6 @@ def UCT_search(game_state, times, net):
         value_estimate = value_estimate.item()
 
         if leaf.game.check_win() is not None: # if checkmate
-            print("hit")
             leaf.backup(value_estimate); continue
 
         child_priors = child_priors.detach().cpu().numpy().reshape(-1)
@@ -126,27 +127,31 @@ def UCT_search(game_state, times, net):
     return np.argmax(root.child_number_visits), root.get_policy()
 
 def MCTS_self_play(iter, num_games, chessnet):
-    for t in range(num_games):
+    if not os.path.exists('datasets/iter{}'.format(iter)):
+        os.makedirs('datasets/iter{}'.format(iter))
+
+    for n in tqdm(range(num_games)):
         board = Board()
         checkmate = False
         dataset = []
         value = 0
         move_count = 0
 
-        while not checkmate and move_count < 100:
-            best_move, policy = UCT_search(board, 1000, chessnet)
+        while not checkmate:
+            best_move, policy = UCT_search(board, 500, chessnet)
 
             encoded_s = board.encode_board()
             draw_counter = 0
-            for s, _ in reversed(dataset):
-                if np.array_equal(encoded_s[:16], s[:16]):
-                    draw_counter += 1
-                if draw_counter >= 3: break
+            #  for s, _ in reversed(dataset):
+                #  if np.array_equal(encoded_s[:16], s[:16]):
+                    #  draw_counter += 1
+                #  if draw_counter >= 3: break
 
-            if draw_counter >= 3: break
+            #  if draw_counter >= 3: break
 
             dataset.append([encoded_s, policy])
-            print("=============", draw_counter)
+            print("=============")
+            print("move_count = {} draw_counter = {}".format(move_count, draw_counter))
             print(board)
             print("best_move = {} ({})".format(board.decode_move(best_move), best_move))
             board.move_chess(best_move)
@@ -169,7 +174,7 @@ def MCTS_self_play(iter, num_games, chessnet):
             else:
                 dataset_pv.append([s, p, value])
 
-        with open('./datasets/iter{}/dataset_{}_{}.pkl'.format(iter, t, datetime.datetime.today().strftime("%Y-%m-%d")), 'wb') as f:
+        with open('./datasets/iter{}/dataset_{}.pkl'.format(iter, int(time.time())), 'wb') as f:
             pickle.dump(dataset_pv, f)
 
 
