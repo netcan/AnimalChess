@@ -1,17 +1,21 @@
+import torch, math
 import numpy as np
+import pickle, collections, datetime
+from tqdm import tqdm
 from animal_chess_pymodule import *
 from alpha_zero_net import ChessNet
 
-class Node:
-    def __init__(game, move, parent = None):
+class Node():
+    MAX_ACTION = 252
+    def __init__(self, game, move, parent = None):
         self.is_expanded = False
         self.parent = parent
         self.game = game
         self.move = move
         self.children = {}
-        self.child_priors = np.zeros([252], dtype=np.float)
-        self.child_total_value = np.zeros([252], dtype=np.float)
-        self.child_number_visits = np.zeros([252], dtype=np.float)
+        self.child_priors = np.zeros([Node.MAX_ACTION], dtype=np.float)
+        self.child_total_value = np.zeros([Node.MAX_ACTION], dtype=np.float)
+        self.child_number_visits = np.zeros([Node.MAX_ACTION], dtype=np.float)
         self.action_idxes = []
 
     @property
@@ -40,7 +44,7 @@ class Node:
     def best_child(self):
         if self.action_idxes != []:
             bestmove = self.child_Q() + self.child_U()
-            bestmove = np.argmax(bestmove[self.action_idxes])
+            bestmove = self.action_idxes[np.argmax(bestmove[self.action_idxes])]
         else:
             bestmove = np.argmax(self.child_Q() + self.child_U())
         return bestmove
@@ -53,8 +57,8 @@ class Node:
     def select_leaf(self):
         current = self
         while current.is_expanded:
-            bestmove = current.best_child()
-            current.board.move_chess(best_move)
+            best_move = current.best_child()
+            current.game.move_chess(best_move)
             current = current.maybe_add_child(best_move)
         return current
 
@@ -66,13 +70,13 @@ class Node:
 
     def expand(self, child_priors):
         self.is_expanded = True
-        self.action_idxs = self.game.generate_all_steps()
-        if self.action_idxs == []:
+        self.action_idxes = self.game.generate_all_steps()
+        if self.action_idxes == []:
             self.is_expanded = False
         self.child_priors = child_priors
 
         mask = np.ones(len(self.child_priors), np.bool)
-        mask[self.action_idxs] = False
+        mask[self.action_idxes] = False
         self.child_priors[mask] = 0.0
 
     def backup(self, value_estimate: float):
@@ -84,8 +88,15 @@ class Node:
             elif current.game.role() == Role.RED: # same as current.parent.game.player = 1
                 current.total_value += (-1*value_estimate)
 
-            current.game.undo_move()
+            if not isinstance(current.parent, DummyNode):
+                current.game.undo_move()
             current = current.parent
+
+    def get_policy(self):
+        policy = np.zeros(Node.MAX_ACTION)
+        for idx in np.where(self.child_number_visits!=0)[0]:
+            policy[idx] = self.child_number_visits[idx]/self.child_number_visits.sum()
+        return policy
 
 class DummyNode(object):
     def __init__(self):
@@ -95,14 +106,70 @@ class DummyNode(object):
 
 def UCT_search(game_state, times, net):
     root = Node(game_state, move=None, parent=DummyNode())
-    for i in range(times):
+    for i in (range(times)):
         leaf = root.select_leaf()
-        encoded_s = ed.encode_board(leaf.game); encoded_s = encoded_s.transpose(2,0,1)
-        encoded_s = torch.from_numpy(encoded_s).float().cuda()
+        encoded_s = torch.from_numpy(np.array(leaf.game.encode_board())).float()
+        if torch.cuda.is_available(): encoded_s = encoded_s.cuda()
+
         child_priors, value_estimate = net(encoded_s)
-        child_priors = child_priors.detach().cpu().numpy().reshape(-1); value_estimate = value_estimate.item()
-        if leaf.game.check_status() == True and leaf.game.in_check_possible_moves() == []: # if checkmate
+
+        value_estimate = value_estimate.item()
+
+        if leaf.game.check_win() is not None: # if checkmate
+            print("hit")
             leaf.backup(value_estimate); continue
+
+        child_priors = child_priors.detach().cpu().numpy().reshape(-1)
         leaf.expand(child_priors) # need to make sure valid moves
         leaf.backup(value_estimate)
-    return np.argmax(root.child_number_visits), root
+
+    return np.argmax(root.child_number_visits), root.get_policy()
+
+def MCTS_self_play(iter, num_games, chessnet):
+    for t in range(num_games):
+        board = Board()
+        checkmate = False
+        dataset = []
+        value = 0
+        move_count = 0
+
+        while not checkmate and move_count < 100:
+            best_move, policy = UCT_search(board, 1000, chessnet)
+
+            encoded_s = board.encode_board()
+            draw_counter = 0
+            for s, _ in reversed(dataset):
+                if np.array_equal(encoded_s[:16], s[:16]):
+                    draw_counter += 1
+                if draw_counter >= 3: break
+
+            if draw_counter >= 3: break
+
+            dataset.append([encoded_s, policy])
+            print("=============", draw_counter)
+            print(board)
+            print("best_move = {} ({})".format(board.decode_move(best_move), best_move))
+            board.move_chess(best_move)
+
+            win_status = board.check_win()
+            if win_status is not None:
+                if win_status == Role.BLACK:
+                    value = -1
+                else:
+                    value = 1
+                checkmate = True
+            move_count += 1
+
+        print("iter {} checkmate {}".format(iter, checkmate))
+        dataset_pv = []
+        for idx, data in enumerate(dataset):
+            s, p = data
+            if idx == 0:
+                dataset_pv.append([s, p, 0])
+            else:
+                dataset_pv.append([s, p, value])
+
+        with open('./datasets/iter{}/dataset_{}_{}.pkl'.format(iter, t, datetime.datetime.today().strftime("%Y-%m-%d")), 'wb') as f:
+            pickle.dump(dataset_pv, f)
+
+

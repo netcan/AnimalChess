@@ -81,7 +81,7 @@ impl Board {
         get_move(self.board.decode_move(idx))
     }
 
-    /// encode board by 2-value matrix: (16, 9, 7)
+    /// encode board by 2-value matrix: (17, 9, 7)
     fn encode_board(&self) -> Vec<Vec<Vec<u8>>> {
         self.board.encode_board()
     }

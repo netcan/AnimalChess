@@ -379,11 +379,13 @@ impl Board {
     }
 
     pub fn encode_board(&self) -> Vec<Vec<Vec<u8>>>{
-        // (16, 9, 7)
-        let mut encoded = vec![vec![vec![0; COL_NUM]; ROW_NUM]; 16];
+        // (17, 9, 7)
+        let mut encoded = vec![vec![vec![0; COL_NUM]; ROW_NUM]; 17];
         for i in 0..ROW_NUM {
             for j in 0..COL_NUM {
                 let chess_id = self.chesses[i][j];
+                if self.role == BLACK { encoded[16][i][j] = 1; }
+
                 if chess_id == EMPTY_CHESS { continue; }
                 encoded[chess_id.get_chess_idx()][i][j] = 1;
             }

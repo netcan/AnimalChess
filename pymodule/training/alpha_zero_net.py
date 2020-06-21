@@ -6,11 +6,11 @@ from torch.utils.data import Dataset, DataLoader
 class ConvBlock(nn.Module):
     def __init__(self):
         super(ConvBlock, self).__init__()
-        self.conv = nn.Conv2d(16, 256, 3, stride=1, padding=1)
+        self.conv = nn.Conv2d(17, 256, 3, stride=1, padding=1)
         self.bn = nn.BatchNorm2d(256)
 
     def forward(self, s):
-        s = s.view(-1, 16, 9, 7) # batch_size x channels x board_x x board_y
+        s = s.view(-1, 17, 9, 7) # batch_size x channels x board_x x board_y
         return F.relu(self.bn(self.conv(s)))
 
 class ResBlock(nn.Module):
@@ -61,15 +61,14 @@ class ChessNet(nn.Module):
     def __init__(self):
         super(ChessNet, self).__init__()
         self.conv = ConvBlock()
-        self.res = []
         for block in range(19):
-            self.res.append(ResBlock())
+            setattr(self, "res_%i" % block, ResBlock())
         self.out = OutBlock()
 
     def forward(self, s):
         s = self.conv(s)
         for block in range(19):
-            s = self.res[block](s)
+            s = getattr(self, "res_%i" % block)(s)
         return self.out(s)
 
 class AlphaLoss(nn.Module):
