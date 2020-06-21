@@ -8,7 +8,7 @@
 ************************************************************************/
 
 use animal_chess_core::board::{
-    Board as Brd, MOVE, ROW_NUM, COL_NUM,
+    Board as Brd, ROW_NUM, COL_NUM,
     get_move, to_pos, RED_DEN, BLACK_DEN, TRAP
 };
 use animal_chess_core::chess::{*, ChessKind::*};
@@ -50,6 +50,14 @@ impl Board {
             RoleType::RED   => Some(Role::RED),
             RoleType::BLACK => Some(Role::BLACK),
             _ => None
+        }
+    }
+
+    fn role(&self) -> i32 {
+        match self.board.role {
+            RoleType::RED => Role::RED,
+            RoleType::BLACK => Role::BLACK,
+            _ => unreachable!()
         }
     }
 
