@@ -1,0 +1,12 @@
+import torch
+from tqdm import tqdm
+from mcts import MCTS_self_play
+from train import train
+
+if __name__ == '__main__':
+    for iter in tqdm(range(10)):
+        # mtcs serach
+        MCTS_self_play(iter, 60)
+
+        # training
+        train(iter)

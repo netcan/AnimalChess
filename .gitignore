@@ -1,6 +1,7 @@
 target/
 datasets/
 .DS_Store
+model_data/
 Thumbs.db
 *_
 flamegraph.svg

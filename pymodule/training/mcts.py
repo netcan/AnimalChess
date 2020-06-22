@@ -1,6 +1,7 @@
 import torch, math, os
 import numpy as np
 import pickle, collections, time
+from utils import load_net
 from tqdm import tqdm
 from animal_chess_pymodule import *
 from alpha_zero_net import ChessNet
@@ -126,9 +127,12 @@ def UCT_search(game_state, times, net):
 
     return np.argmax(root.child_number_visits), root.get_policy()
 
-def MCTS_self_play(iter, num_games, chessnet):
+def MCTS_self_play(iter, num_games):
     if not os.path.exists('datasets/iter{}'.format(iter)):
         os.makedirs('datasets/iter{}'.format(iter))
+
+    net = load_net(iter)
+    net.eval()
 
     for n in tqdm(range(num_games)):
         board = Board()
@@ -138,9 +142,9 @@ def MCTS_self_play(iter, num_games, chessnet):
         move_count = 0
 
         while not checkmate:
-            best_move, policy = UCT_search(board, 500, chessnet)
+            best_move, policy = UCT_search(board, 500, net)
 
-            encoded_s = board.encode_board()
+            encoded_s = np.array(board.encode_board())
             draw_counter = 0
             for s, _ in reversed(dataset):
                 if np.array_equal(encoded_s[:16], s[:16]):
