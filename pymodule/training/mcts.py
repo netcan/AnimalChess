@@ -142,12 +142,12 @@ def MCTS_self_play(iter, num_games, chessnet):
 
             encoded_s = board.encode_board()
             draw_counter = 0
-            #  for s, _ in reversed(dataset):
-                #  if np.array_equal(encoded_s[:16], s[:16]):
-                    #  draw_counter += 1
-                #  if draw_counter >= 3: break
+            for s, _ in reversed(dataset):
+                if np.array_equal(encoded_s[:16], s[:16]):
+                    draw_counter += 1
+                if draw_counter >= 3: break
 
-            #  if draw_counter >= 3: break
+            if draw_counter >= 3: break
 
             dataset.append([encoded_s, policy])
             print("=============")
@@ -166,6 +166,7 @@ def MCTS_self_play(iter, num_games, chessnet):
             move_count += 1
 
         print("iter {} checkmate {}".format(iter, checkmate))
+        if not checkmate: continue
         dataset_pv = []
         for idx, data in enumerate(dataset):
             s, p = data
