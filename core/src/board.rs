@@ -49,12 +49,13 @@ pub fn to_move(mv: &((usize, usize), (usize, usize))) -> MOVE {
 #[derive(Clone)]
 struct Context {
     eated: ChessId,
+    fen: String,
     mv: MOVE,
 }
 
 impl Context {
-    fn new(eated: ChessId, mv: MOVE) -> Self {
-        Self { eated, mv }
+    fn new(eated: ChessId, fen: String, mv: MOVE) -> Self {
+        Self { eated, fen, mv }
     }
 }
 
@@ -90,6 +91,7 @@ impl Board {
         }
     }
 
+    // l5t/1d3c1/r1p1w1e/7/7/7/E1W1P1R/1C3D1/T5L w
     pub fn load_fen(&mut self, fen: &str) {
         self.chesses = [[EMPTY_CHESS; COL_NUM]; ROW_NUM];
         let fen_u8 = fen.as_bytes();
@@ -133,6 +135,42 @@ impl Board {
         self.ctx.clear();
     }
 
+    pub fn get_fen(&self) -> String {
+        let mut ret = String::new();
+        for i in 0..ROW_NUM {
+            let mut count = 0;
+            for j in 0..COL_NUM {
+                let chess_id = self.chesses[i][j];
+                if chess_id == EMPTY_CHESS {
+                    count += 1;
+                    continue;
+                }
+
+                if count > 0 { ret += &count.to_string(); }
+                count = 0;
+                let c = match chess_id.kind {
+                    ELEPHANT => 'E',
+                    LION => 'L',
+                    TIGER => 'T',
+                    PANTHER => 'P',
+                    WOLF => 'W',
+                    DOG => 'D',
+                    CAT => 'C',
+                    RAT => 'R',
+                    _ => unreachable!(),
+                };
+                let c = if chess_id.role == BLACK {
+                    c.to_ascii_lowercase()
+                } else { c };
+                ret += &c.to_string();
+            }
+            if count > 0 { ret += &count.to_string(); }
+            if i + 1 != ROW_NUM { ret += "/"; }
+        }
+        ret += &format!(" {}", if self.role == RED { 'w' } else { 'b' });
+        ret
+    }
+
     pub fn get_step_count(&self) -> u8 {
         self.ctx.len() as u8
     }
@@ -157,7 +195,7 @@ impl Board {
             black_chess_num: 0,
             ctx: Vec::new(),
         };
-        board.load_fen("l5t/1d3c1/r1p1w1e/7/7/7/E1W1P1R/1C3D1/T5L w 0");
+        board.load_fen("l5t/1d3c1/r1p1w1e/7/7/7/E1W1P1R/1C3D1/T5L w");
 
         board
     }
@@ -165,10 +203,10 @@ impl Board {
     pub fn move_chess(&mut self, mv: MOVE) {
         let (src, dst) = get_move(mv);
         let eated = self.chesses[dst.0][dst.1];
+        self.ctx.push(Context::new(eated, self.get_fen(), mv));
+
         self.chesses[dst.0][dst.1] = self.chesses[src.0][src.1];
         self.chesses[src.0][src.1] = EMPTY_CHESS;
-
-        self.ctx.push(Context::new(eated, mv));
 
         self.in_den = self.check_in_den(get_dst_pos(mv));
         self.update_chess_num(eated, UpdateChess::DEC);
