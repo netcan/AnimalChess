@@ -120,7 +120,11 @@ def UCT_search(game_state, times, net):
         value_estimate = value_estimate.item()
 
         if leaf.game.check_win() is not None: # if checkmate
-            leaf.backup(value_estimate); continue
+            if leaf.game.check_win() == Role.RED:
+                leaf.backup(1)
+            else:
+                leaf.backup(-1)
+            continue
 
         child_priors = child_priors.detach().cpu().numpy().reshape(-1)
         leaf.expand(child_priors) # need to make sure valid moves
@@ -149,7 +153,7 @@ def MCTS_self_play(iter, num_games):
             dataset.append([encoded_s, policy])
 
             print("=============")
-            print("move_count = {}".format(move_count))
+            print("move_count = {} dup_times = {}".format(move_count, board.get_dup_count()))
             print(board)
             print("best_move = {} ({})".format(board.decode_move(best_move), best_move))
             board.move_chess(best_move)

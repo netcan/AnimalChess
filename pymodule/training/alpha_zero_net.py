@@ -5,11 +5,11 @@ import torch.nn.functional as F
 class ConvBlock(nn.Module):
     def __init__(self):
         super(ConvBlock, self).__init__()
-        self.conv = nn.Conv2d(17, 256, 3, stride=1, padding=1)
+        self.conv = nn.Conv2d(18, 256, 3, stride=1, padding=1)
         self.bn = nn.BatchNorm2d(256)
 
     def forward(self, s):
-        s = s.view(-1, 17, 9, 7) # batch_size x channels x board_x x board_y
+        s = s.view(-1, 18, 9, 7) # batch_size x channels x board_x x board_y
         return F.relu(self.bn(self.conv(s)))
 
 class ResBlock(nn.Module):

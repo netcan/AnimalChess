@@ -89,6 +89,10 @@ impl Board {
     fn encode_board(&self) -> Vec<Vec<Vec<u8>>> {
         self.board.encode_board()
     }
+
+    fn get_dup_count(&self) -> u8 {
+        self.board.get_dup_count()
+    }
 }
 
 #[pyproto]
