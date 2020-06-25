@@ -66,6 +66,7 @@ pub struct Board {
     red_chess_num: usize,
     black_chess_num: usize,
     in_den: RoleType,
+    fen: String,
     ctx: Vec<Context>,
 }
 
@@ -131,44 +132,13 @@ impl Board {
         self.role = if fen_u8[fen_idx] == b'w' { RED }
                     else { BLACK };
 
+        self.fen = String::from(fen);
         // TODO: in_den check
         self.ctx.clear();
     }
 
     pub fn get_fen(&self) -> String {
-        let mut ret = String::new();
-        for i in 0..ROW_NUM {
-            let mut count = 0;
-            for j in 0..COL_NUM {
-                let chess_id = self.chesses[i][j];
-                if chess_id == EMPTY_CHESS {
-                    count += 1;
-                    continue;
-                }
-
-                if count > 0 { ret += &count.to_string(); }
-                count = 0;
-                let c = match chess_id.kind {
-                    ELEPHANT => 'E',
-                    LION => 'L',
-                    TIGER => 'T',
-                    PANTHER => 'P',
-                    WOLF => 'W',
-                    DOG => 'D',
-                    CAT => 'C',
-                    RAT => 'R',
-                    _ => unreachable!(),
-                };
-                let c = if chess_id.role == BLACK {
-                    c.to_ascii_lowercase()
-                } else { c };
-                ret += &c.to_string();
-            }
-            if count > 0 { ret += &count.to_string(); }
-            if i + 1 != ROW_NUM { ret += "/"; }
-        }
-        ret += &format!(" {}", if self.role == RED { 'w' } else { 'b' });
-        ret
+        self.fen.clone()
     }
 
     pub fn get_step_count(&self) -> u8 {
@@ -191,6 +161,7 @@ impl Board {
             chesses: [[EMPTY_CHESS; COL_NUM]; ROW_NUM],
             role: RED,
             in_den: RoleType::EMPTY,
+            fen: String::new(),
             red_chess_num: 0,
             black_chess_num: 0,
             ctx: Vec::new(),
@@ -200,11 +171,59 @@ impl Board {
         board
     }
 
+    fn update_fn(&mut self, mv: MOVE) {
+        let (src, dst) = get_move(mv);
+        let pat_role: Vec<&str> = self.fen.split(' ').collect();
+        let mut row: Vec<&str> = pat_role[0]
+            .split('/')
+            .collect();
+
+        let mut tmp_row = [String::new(), String::new()];
+        let (from, to) = (src.0, dst.0);
+
+        let mut update_row = |i: usize, tmp_i: usize| {
+            let mut count = 0;
+            for j in 0..COL_NUM {
+                let chess_id = self.chesses[i][j];
+                if chess_id == EMPTY_CHESS {
+                    count += 1;
+                    continue;
+                }
+
+                if count > 0 { tmp_row[tmp_i] += &count.to_string(); }
+                count = 0;
+                let c = match chess_id.kind {
+                    ELEPHANT => 'E',
+                    LION => 'L',
+                    TIGER => 'T',
+                    PANTHER => 'P',
+                    WOLF => 'W',
+                    DOG => 'D',
+                    CAT => 'C',
+                    RAT => 'R',
+                    _ => unreachable!(),
+                };
+                let c = if chess_id.role == BLACK {
+                    c.to_ascii_lowercase()
+                } else { c };
+                tmp_row[tmp_i] += &c.to_string();
+            }
+            if count > 0 { tmp_row[tmp_i] += &count.to_string(); }
+        };
+        update_row(from, 0);
+        if from != to {
+            update_row(to, 1);
+            row[to] = &tmp_row[1];
+        }
+        row[from] = &tmp_row[0];
+
+        self.fen = row.join("/");
+        self.fen += &format!(" {}", if self.role == RED { 'w' } else { 'b' });
+    }
+
     pub fn move_chess(&mut self, mv: MOVE) {
         let (src, dst) = get_move(mv);
         let eated = self.chesses[dst.0][dst.1];
-        self.ctx.push(Context::new(eated, self.get_fen(), mv));
-
         self.chesses[dst.0][dst.1] = self.chesses[src.0][src.1];
         self.chesses[src.0][src.1] = EMPTY_CHESS;
 
@@ -212,6 +231,9 @@ impl Board {
         self.update_chess_num(eated, UpdateChess::DEC);
 
         self.switch_player();
+
+        self.ctx.push(Context::new(eated, self.get_fen(), mv));
+        self.update_fn(mv);
     }
 
     pub fn undo_move(&mut self) {
@@ -221,6 +243,7 @@ impl Board {
             self.chesses[dst.0][dst.1] = context.eated;
 
             self.in_den = RoleType::EMPTY;
+            self.fen = context.fen;
             self.update_chess_num(context.eated, UpdateChess::ADD);
             self.switch_player();
         }
