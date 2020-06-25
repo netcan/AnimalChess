@@ -5,6 +5,7 @@ from utils import load_net
 from tqdm import tqdm
 from animal_chess_pymodule import *
 from alpha_zero_net import ChessNet
+import torch.multiprocessing as mp
 
 class Node():
     MAX_ACTION = 252
@@ -132,13 +133,7 @@ def UCT_search(game_state, times, net):
 
     return np.argmax(root.child_number_visits), root.get_policy()
 
-def MCTS_self_play(iter, num_games):
-    if not os.path.exists('datasets/iter{}'.format(iter)):
-        os.makedirs('datasets/iter{}'.format(iter))
-
-    net = load_net(iter)
-    net.eval()
-
+def worker(iter, num_games, net, workid = 0):
     for n in tqdm(range(num_games)):
         board = Board()
         checkmate = False
@@ -153,7 +148,7 @@ def MCTS_self_play(iter, num_games):
             dataset.append([encoded_s, policy])
 
             print("=============")
-            print("move_count = {} dup_times = {}".format(move_count, board.get_dup_count()))
+            print("[workid:{}] move_count = {} dup_times = {}".format(workid, move_count, board.get_dup_count()))
             print(board)
             print("best_move = {} ({})".format(board.decode_move(best_move), best_move))
             board.move_chess(best_move)
@@ -180,4 +175,26 @@ def MCTS_self_play(iter, num_games):
         with open('./datasets/iter{}/dataset_{}.pkl'.format(iter, int(time.time())), 'wb') as f:
             pickle.dump(dataset_pv, f)
 
+def MCTS_self_play(iter, num_games, workers = 1):
+    if not os.path.exists('datasets/iter{}'.format(iter)):
+        os.makedirs('datasets/iter{}'.format(iter))
+
+    net = load_net(iter)
+    if workers > 1:
+        net.share_memory()
+        mp.set_start_method("spawn",force=True)
+    net.eval()
+
+
+    if workers > 1:
+        process = []
+        for i in range(workers):
+            w = mp.Process(target=worker, args=(iter, num_games, net, i))
+            w.start()
+            process.append(w)
+
+        for w in process:
+            w.join()
+    else:
+        worker(iter, num_games, net)
 
