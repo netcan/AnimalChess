@@ -174,6 +174,7 @@ impl Game {
                 if let Some(_) = self.movable_pos.iter().find(|&&mv| { return get_dst_pos(mv) == to_pos(&dst) }) {
                     let src = self.selected_chess.unwrap();
                     board.move_chess(to_move(&(get_pos(src), dst)));
+                    println!("{}", board.get_fen());
                     self.computer_turn = ! self.computer_turn;
                 }
                 self.selected_chess = None;
@@ -224,6 +225,7 @@ impl Game {
                 if self.computer_turn && self.board.borrow().check_win() == RoleType::EMPTY {
                     let mv = self.computer.get_move();
                     self.board.borrow_mut().move_chess(mv);
+                    println!("{}", self.board.borrow().get_fen());
                     self.computer_turn = ! self.computer_turn;
                 }
             } else {

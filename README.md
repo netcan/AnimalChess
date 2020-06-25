@@ -99,6 +99,6 @@ T #@# L
 - [ ] add some test
 - [x] benmark pymodule
 - [x] encode/decode move
-- [ ] generate fen
+- [x] generate fen
 - [x] repr board
 - [ ] patch sdl2 to support `load_texture` from buffer
