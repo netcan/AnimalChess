@@ -153,6 +153,21 @@ impl Board {
             else { return BLACK; }
         }
 
+        // if duplicate 3 times, first role loss
+        let mut dup_times = 0;
+        for context in self.ctx.iter().rev() {
+            if self.get_fen() == context.fen {
+                dup_times += 1;
+            }
+            if dup_times >= 3 {
+                if self.role == RED { // red loss
+                    return BLACK;
+                } else {
+                    return RED;
+                }
+            }
+        }
+
         RoleType::EMPTY
     }
 
