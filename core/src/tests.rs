@@ -30,7 +30,7 @@ fn test_encode_decode_move() {
 
 #[test]
 fn test_load_and_get_fen() {
-    use crate::board::{Board, ROW_NUM, COL_NUM};
+    use crate::board::Board;
     use rand::seq::SliceRandom;
     for _ in 0..50 {
         let mut board = Board::new();

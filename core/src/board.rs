@@ -9,6 +9,7 @@
 
 use crate::chess::{*, ChessKind::*, RoleType::*};
 use std::cmp::Ordering;
+use std::collections::HashMap;
 
 pub type POS = u8;
 pub type MOVE = u16;
@@ -67,6 +68,7 @@ pub struct Board {
     black_chess_num: usize,
     in_den: RoleType,
     fen: String,
+    fen_counts: HashMap<String, u8>,
     ctx: Vec<Context>,
 }
 
@@ -153,18 +155,13 @@ impl Board {
             else { return BLACK; }
         }
 
-        // if duplicate 3 times, first role loss
-        let mut dup_times = 0;
-        for context in self.ctx.iter().rev() {
-            if self.get_fen() == context.fen {
-                dup_times += 1;
-            }
-            if dup_times >= 3 {
-                if self.role == RED { // red loss
-                    return BLACK;
-                } else {
-                    return RED;
-                }
+        // if duplicate 2 times, first role loss
+        let dup_times = self.fen_counts.get(&self.fen).unwrap_or(&0);
+        if dup_times >= &2 {
+            if self.role == RED { // red loss
+                return BLACK;
+            } else {
+                return RED;
             }
         }
 
@@ -177,6 +174,7 @@ impl Board {
             role: RED,
             in_den: RoleType::EMPTY,
             fen: String::new(),
+            fen_counts: HashMap::new(),
             red_chess_num: 0,
             black_chess_num: 0,
             ctx: Vec::new(),
@@ -248,6 +246,8 @@ impl Board {
         self.switch_player();
 
         self.ctx.push(Context::new(eated, self.get_fen(), mv));
+
+        *self.fen_counts.entry(self.get_fen()).or_insert(0) += 1;
         self.update_fn(mv);
     }
 
@@ -258,6 +258,7 @@ impl Board {
             self.chesses[dst.0][dst.1] = context.eated;
 
             self.in_den = RoleType::EMPTY;
+            *self.fen_counts.get_mut(&context.fen).expect("expect fen!") -= 1;
             self.fen = context.fen;
             self.update_chess_num(context.eated, UpdateChess::ADD);
             self.switch_player();
