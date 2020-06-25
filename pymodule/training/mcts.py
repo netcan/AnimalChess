@@ -39,8 +39,8 @@ class Node():
         return self.child_total_value / (self.child_number_visits + 1)
 
     def child_U(self):
-        return abs(self.child_priors) * (math.sqrt(self.number_visits)
-                                         / (self.child_number_visits + 1))
+          return math.sqrt(self.number_visits) * (abs(self.child_priors)
+                                        / (1 + self.child_number_visits))
 
     def best_child(self):
         if self.action_idxes != []:
@@ -65,7 +65,7 @@ class Node():
 
     def add_dirichlet_noise(self):
         valid_child_priors = self.child_priors[self.action_idxes] # select only legal moves entries in child_priors array
-        valid_child_priors = 0.75*valid_child_priors + 0.25*np.random.dirichlet(np.zeros([len(valid_child_priors)], dtype=np.float32)+0.3)
+        valid_child_priors = 0.75*valid_child_priors + 0.25*np.random.dirichlet(np.zeros([len(valid_child_priors)], dtype=np.float32)+192)
         self.child_priors[self.action_idxes] = valid_child_priors
 
     def expand(self, child_priors):
@@ -111,6 +111,7 @@ def UCT_search(game_state, times, net):
     root = Node(game_state, move=None, parent=DummyNode())
     for i in (range(times)):
         leaf = root.select_leaf()
+        #  print('leaf step count = ', leaf.game.get_step_count());
         encoded_s = torch.from_numpy(np.array(leaf.game.encode_board())).float()
         if torch.cuda.is_available(): encoded_s = encoded_s.cuda()
 
@@ -142,20 +143,13 @@ def MCTS_self_play(iter, num_games):
         move_count = 0
 
         while not checkmate:
-            best_move, policy = UCT_search(board, 500, net)
+            best_move, policy = UCT_search(board, 1400, net)
 
             encoded_s = np.array(board.encode_board())
-            draw_counter = 0
-            for s, _ in reversed(dataset):
-                if np.array_equal(encoded_s[:16], s[:16]):
-                    draw_counter += 1
-                if draw_counter >= 3: break
-
-            if draw_counter >= 3: break
-
             dataset.append([encoded_s, policy])
+
             print("=============")
-            print("move_count = {} draw_counter = {}".format(move_count, draw_counter))
+            print("move_count = {}".format(move_count))
             print(board)
             print("best_move = {} ({})".format(board.decode_move(best_move), best_move))
             board.move_chess(best_move)
@@ -169,8 +163,8 @@ def MCTS_self_play(iter, num_games):
                 checkmate = True
             move_count += 1
 
-        print("iter {} checkmate {}".format(iter, checkmate))
-        if not checkmate: continue
+        print("iter {} checkmate {} value = {}".format(iter, checkmate, value))
+        #  if not checkmate: continue
         dataset_pv = []
         for idx, data in enumerate(dataset):
             s, p = data

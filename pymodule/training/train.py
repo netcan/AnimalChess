@@ -26,7 +26,7 @@ def load_dataset(iter):
     return datasets
 
 
-def train(iter, epoch_start=0, epoch_stop=20, seed=0):
+def train(iter, epoch_start=0, epoch_stop=100, seed=0):
     torch.manual_seed(seed)
     net = load_net()
     net.train()
@@ -35,7 +35,7 @@ def train(iter, epoch_start=0, epoch_stop=20, seed=0):
 
     criterion = AlphaLoss()
     optimizer = optim.Adam(net.parameters(), lr=0.001)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100,200,300,400], gamma=0.2)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100,200,300,400], gamma=0.77)
 
     train_set = BoardDataset(load_dataset(iter))
     train_loader = DataLoader(train_set, batch_size=30, shuffle=True, num_workers=0, pin_memory=False)

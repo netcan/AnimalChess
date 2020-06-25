@@ -4,9 +4,9 @@ from mcts import MCTS_self_play
 from train import train
 
 if __name__ == '__main__':
-    for iter in tqdm(range(10)):
+    for iter in tqdm(range(0, 100)):
         # mtcs serach
-        MCTS_self_play(iter, 60)
+        MCTS_self_play(iter, 30)
 
         # training
         train(iter)

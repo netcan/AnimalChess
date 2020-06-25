@@ -77,7 +77,7 @@ class AlphaLoss(nn.Module):
     def forward(self, y_value, v, y_policy, policy):
         value_error = (y_value - v) ** 2
         policy_error = torch.sum((-policy*
-                                (1e-6 + y_policy.float()).float().log()), 1)
+                                (1e-8 + y_policy.float()).float().log()), 1)
         total_error = (value_error.view(-1).float() + policy_error).mean()
         return total_error
 
