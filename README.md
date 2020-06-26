@@ -96,7 +96,7 @@ T #@# L
 - [x] Add `Monte Carlo Tree Search` Algorithm
 - [x] benmark board operation
 - [x] export module for python3
-- [ ] add some test
+- [x] add some test
 - [x] benmark pymodule
 - [x] encode/decode move
 - [x] generate fen

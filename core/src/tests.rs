@@ -7,6 +7,8 @@
     > Created Time: 2020-06-20 19:22
 ************************************************************************/
 
+#[cfg(test)]
+mod tests {
 #[test]
 fn test_encode_decode_move() {
     use crate::board::{Board, get_move};
@@ -51,5 +53,29 @@ fn test_load_and_get_fen() {
             board.move_chess(*steps.choose(&mut rand::thread_rng()).unwrap());
         }
     }
+
+}
+
+#[test]
+fn test_zobrist() {
+    use crate::board::{Board, to_move};
+    let mut board = Board::new();
+    board.load_fen("lL5/7/7/7/7/7/7/7/7 w");
+    let zobrist_key = board.zobrist_key;
+    let src = (0, 1);
+    let dst = (0, 2);
+
+    board.move_chess(to_move(&(src, dst)));
+    board.move_chess(to_move(&(dst, src)));
+    assert_eq!(zobrist_key, board.zobrist_key);
+
+    board.undo_move();
+    board.undo_move();
+
+    assert_eq!(zobrist_key, board.zobrist_key);
+    board.move_chess(to_move(&(src, (0, 0))));
+    board.undo_move();
+    assert_eq!(zobrist_key, board.zobrist_key);
+}
 
 }

@@ -10,6 +10,7 @@
 use crate::chess::{*, ChessKind::*, RoleType::*};
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use rand::Rng;
 
 pub type POS = u8;
 pub type MOVE = u16;
@@ -47,16 +48,18 @@ pub fn to_move(mv: &((usize, usize), (usize, usize))) -> MOVE {
     ((to_pos(&mv.0) as MOVE) << 8) | to_pos(&mv.1) as MOVE
 }
 
+type ZobristKeyType = u64;
+
 #[derive(Clone)]
 struct Context {
     eated: ChessId,
-    fen: String,
+    zobrist_key: ZobristKeyType,
     mv: MOVE,
 }
 
 impl Context {
-    fn new(eated: ChessId, fen: String, mv: MOVE) -> Self {
-        Self { eated, fen, mv }
+    fn new(eated: ChessId, zobrist_key: ZobristKeyType, mv: MOVE) -> Self {
+        Self { eated, zobrist_key, mv }
     }
 }
 
@@ -66,9 +69,10 @@ pub struct Board {
     pub role: RoleType, // 轮到谁下
     red_chess_num: usize,
     black_chess_num: usize,
+    zobrist_tbl: [[[ZobristKeyType; COL_NUM]; ROW_NUM]; 16],
+    pub zobrist_key: ZobristKeyType,
     in_den: RoleType,
-    fen: String,
-    fen_counts: HashMap<String, u8>,
+    dup_counter: HashMap<ZobristKeyType, u8>,
     ctx: Vec<Context>,
 }
 
@@ -97,6 +101,7 @@ impl Board {
     // l5t/1d3c1/r1p1w1e/7/7/7/E1W1P1R/1C3D1/T5L w
     pub fn load_fen(&mut self, fen: &str) {
         self.chesses = [[EMPTY_CHESS; COL_NUM]; ROW_NUM];
+        self.zobrist_key = 0;
         let fen_u8 = fen.as_bytes();
         let mut fen_idx = 0;
 
@@ -126,6 +131,7 @@ impl Board {
             if chess_id != EMPTY_CHESS {
                 self.update_chess_num(chess_id, UpdateChess::ADD);
                 self.chesses[pos / COL_NUM][pos % COL_NUM] = chess_id;
+                self.zobrist_key ^= self.zobrist_tbl[chess_id.get_chess_idx()][pos / COL_NUM][pos % COL_NUM];
                 pos += 1;
             }
             fen_idx += 1;
@@ -134,17 +140,49 @@ impl Board {
         self.role = if fen_u8[fen_idx] == b'w' { RED }
                     else { BLACK };
 
-        self.fen = String::from(fen);
         // TODO: in_den check
         self.ctx.clear();
     }
 
     pub fn get_fen(&self) -> String {
-        self.fen.clone()
+	let mut ret = String::new();
+	for i in 0..ROW_NUM {
+	    let mut count = 0;
+	    for j in 0..COL_NUM {
+		let chess_id = self.chesses[i][j];
+		if chess_id == EMPTY_CHESS {
+		    count += 1;
+		    continue;
+		}
+
+		if count > 0 { ret += &count.to_string(); }
+		count = 0;
+		let c = match chess_id.kind {
+		    ELEPHANT => 'E',
+		    LION => 'L',
+		    TIGER => 'T',
+		    PANTHER => 'P',
+		    WOLF => 'W',
+		    DOG => 'D',
+		    CAT => 'C',
+		    RAT => 'R',
+		    _ => unreachable!(),
+		};
+		let c = if chess_id.role == BLACK {
+		    c.to_ascii_lowercase()
+		} else { c };
+		ret += &c.to_string();
+	    }
+	    if count > 0 { ret += &count.to_string(); }
+	    if i + 1 != ROW_NUM { ret += "/"; }
+	}
+	ret += &format!(" {}", if self.role == RED { 'w' } else { 'b' });
+	ret
     }
 
+
     pub fn get_dup_count(&self) -> u8 {
-        return *self.fen_counts.get(&self.fen).unwrap_or(&0);
+        return *self.dup_counter.get(&self.zobrist_key).unwrap_or(&0);
     }
 
     pub fn get_step_count(&self) -> u8 {
@@ -160,7 +198,7 @@ impl Board {
         }
 
         // if duplicate 2 times, first role loss
-        let dup_times = self.fen_counts.get(&self.fen).unwrap_or(&0);
+        let dup_times = self.dup_counter.get(&self.zobrist_key).unwrap_or(&0);
         if dup_times >= &2 {
             if self.role == RED { // red loss
                 return BLACK;
@@ -172,76 +210,51 @@ impl Board {
         RoleType::EMPTY
     }
 
+    fn gen_zobrist_tbl() -> [[[ZobristKeyType; COL_NUM]; ROW_NUM]; 16] {
+        let mut zobrist_tbl = [[[0; COL_NUM]; ROW_NUM]; 16];
+        let mut rng = rand::thread_rng();
+
+        for k in 0..16 {
+            for i in 0..ROW_NUM {
+                for j in 0..COL_NUM {
+                    zobrist_tbl[k][i][j] = rng.gen::<ZobristKeyType>();
+                }
+            }
+        }
+
+        zobrist_tbl
+    }
+
     pub fn new() -> Self {
         let mut board = Self {
             chesses: [[EMPTY_CHESS; COL_NUM]; ROW_NUM],
             role: RED,
             in_den: RoleType::EMPTY,
-            fen: String::new(),
-            fen_counts: HashMap::new(),
+            zobrist_tbl: Self::gen_zobrist_tbl(),
+            zobrist_key: 0,
+            dup_counter: HashMap::new(),
             red_chess_num: 0,
             black_chess_num: 0,
             ctx: Vec::new(),
         };
+
         board.load_fen("l5t/1d3c1/r1p1w1e/7/7/7/E1W1P1R/1C3D1/T5L w");
-
         board
-    }
-
-    fn update_fn(&mut self, mv: MOVE) {
-        let (src, dst) = get_move(mv);
-        let pat_role: Vec<&str> = self.fen.split(' ').collect();
-        let mut row: Vec<&str> = pat_role[0]
-            .split('/')
-            .collect();
-
-        let mut tmp_row = [String::new(), String::new()];
-        let (from, to) = (src.0, dst.0);
-
-        let mut update_row = |i: usize, tmp_i: usize| {
-            let mut count = 0;
-            for j in 0..COL_NUM {
-                let chess_id = self.chesses[i][j];
-                if chess_id == EMPTY_CHESS {
-                    count += 1;
-                    continue;
-                }
-
-                if count > 0 { tmp_row[tmp_i] += &count.to_string(); }
-                count = 0;
-                let c = match chess_id.kind {
-                    ELEPHANT => 'E',
-                    LION => 'L',
-                    TIGER => 'T',
-                    PANTHER => 'P',
-                    WOLF => 'W',
-                    DOG => 'D',
-                    CAT => 'C',
-                    RAT => 'R',
-                    _ => unreachable!(),
-                };
-                let c = if chess_id.role == BLACK {
-                    c.to_ascii_lowercase()
-                } else { c };
-                tmp_row[tmp_i] += &c.to_string();
-            }
-            if count > 0 { tmp_row[tmp_i] += &count.to_string(); }
-        };
-        update_row(from, 0);
-        if from != to {
-            update_row(to, 1);
-            row[to] = &tmp_row[1];
-        }
-        row[from] = &tmp_row[0];
-
-        self.fen = row.join("/");
-        self.fen += &format!(" {}", if self.role == RED { 'w' } else { 'b' });
     }
 
     pub fn move_chess(&mut self, mv: MOVE) {
         let (src, dst) = get_move(mv);
         let eated = self.chesses[dst.0][dst.1];
-        self.chesses[dst.0][dst.1] = self.chesses[src.0][src.1];
+        let src_chess = self.chesses[src.0][src.1];
+        let zobrist_key = self.zobrist_key;
+
+        if eated != EMPTY_CHESS {
+            self.zobrist_key ^= self.zobrist_tbl[eated.get_chess_idx()][dst.0][dst.1];
+        }
+        self.zobrist_key ^= self.zobrist_tbl[src_chess.get_chess_idx()][dst.0][dst.1];
+        self.zobrist_key ^= self.zobrist_tbl[src_chess.get_chess_idx()][src.0][src.1];
+
+        self.chesses[dst.0][dst.1] = src_chess;
         self.chesses[src.0][src.1] = EMPTY_CHESS;
 
         self.in_den = self.check_in_den(get_dst_pos(mv));
@@ -249,10 +262,9 @@ impl Board {
 
         self.switch_player();
 
-        self.ctx.push(Context::new(eated, self.get_fen(), mv));
+        self.ctx.push(Context::new(eated, zobrist_key, mv));
 
-        *self.fen_counts.entry(self.get_fen()).or_insert(0) += 1;
-        self.update_fn(mv);
+        *self.dup_counter.entry(zobrist_key).or_insert(0) += 1;
     }
 
     pub fn undo_move(&mut self) {
@@ -262,8 +274,8 @@ impl Board {
             self.chesses[dst.0][dst.1] = context.eated;
 
             self.in_den = RoleType::EMPTY;
-            *self.fen_counts.get_mut(&context.fen).expect("expect fen!") -= 1;
-            self.fen = context.fen;
+            *self.dup_counter.get_mut(&context.zobrist_key).expect("expect zobrist_key!") -= 1;
+            self.zobrist_key = context.zobrist_key;
             self.update_chess_num(context.eated, UpdateChess::ADD);
             self.switch_player();
         }
@@ -481,3 +493,4 @@ impl Board {
         encoded
     }
 }
+
