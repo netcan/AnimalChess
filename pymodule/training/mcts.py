@@ -172,7 +172,7 @@ def worker(iter, num_games, net, workid = 0):
             else:
                 dataset_pv.append([s, p, value])
 
-        with open('./datasets/iter{}/dataset_{}.pkl'.format(iter, int(time.time())), 'wb') as f:
+        with open('./datasets/iter{}/dataset_{}.pkl'.format(iter, int(time.time() * 1000)), 'wb') as f:
             pickle.dump(dataset_pv, f)
 
 def MCTS_self_play(iter, num_games, workers = 1):
