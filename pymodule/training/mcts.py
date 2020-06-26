@@ -142,13 +142,15 @@ def worker(iter, num_games, net, workid = 0):
         move_count = 0
 
         while not checkmate:
+            elapse = time.perf_counter()
             best_move, policy = UCT_search(board, 1400, net)
+            elapse = time.perf_counter() - elapse
 
             encoded_s = np.array(board.encode_board())
             dataset.append([encoded_s, policy])
 
             print("=============")
-            print("[workid:{}] move_count = {} dup_times = {}".format(workid, move_count, board.get_dup_count()))
+            print("[workid:{}] elapse = {:.3f}s move_count = {} dup_times = {}".format(workid, elapse, move_count, board.get_dup_count()))
             print(board)
             print("best_move = {} ({})".format(board.decode_move(best_move), best_move))
             board.move_chess(best_move)
