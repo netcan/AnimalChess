@@ -135,6 +135,7 @@ def UCT_search(game_state, times, net):
 
 def worker(iter, num_games, net, workid = 0):
     for n in tqdm(range(num_games)):
+        #  board = Board('2L3t/1d3c1/r1p1w1e/7/7/7/E1W1P1R/1C3D1/T3l2 w')
         board = Board()
         checkmate = False
         dataset = []
@@ -157,6 +158,8 @@ def worker(iter, num_games, net, workid = 0):
 
             win_status = board.check_win()
             if win_status is not None:
+                print("[workid:{}] game end! dup_times = {}".format(workid, board.get_dup_count()))
+                print(board)
                 if win_status == Role.BLACK:
                     value = -1
                 else:
