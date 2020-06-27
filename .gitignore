@@ -10,3 +10,6 @@ stacks.folded
 .ipynb_checkpoints
 **/*.rs.bk
 *.xz
+*.gz
+*.so
+push.sh

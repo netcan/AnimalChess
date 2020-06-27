@@ -29,6 +29,10 @@ const CELL_HEIGHT: u32 = 70;
 const CHESS_WIDTH: u32 = 64;
 const CHESS_HEIGHT: u32 = 64;
 
+macro_rules! load_asset_file {
+    ($name: literal) => { include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../assets/", $name)) };
+}
+
 pub struct Game {
     chesses_textures: Vec<Texture>,
     board: Rc<RefCell<Board>>,
@@ -43,27 +47,30 @@ pub struct Game {
 }
 
 fn get_chess_texture<T>(chess: ChessId, texture_creator: &TextureCreator<T>) -> Texture {
-    let mut path = String::from("assets/");
     use RoleType::*;
     use ChessKind::*;
-    match chess.role {
-        RED   => { path.push('r'); }
-        BLACK => { path.push('b'); }
-        _     => { unreachable!(); }
-    }
-    match chess.kind {
-        ELEPHANT => { path.push_str("e.png"); }
-        LION     => { path.push_str("l.png"); }
-        TIGER    => { path.push_str("t.png"); }
-        PANTHER  => { path.push_str("p.png"); }
-        WOLF     => { path.push_str("w.png"); }
-        DOG      => { path.push_str("d.png"); }
-        CAT      => { path.push_str("c.png"); }
-        RAT      => { path.push_str("r.png"); }
-        _        => { unreachable!();         }
-    }
 
-    texture_creator.load_texture(path).expect("load texture failed")
+    texture_creator.load_texture_rw(
+        match chess {
+            ChessId { role: RED,   kind: ELEPHANT } => { load_asset_file!("re.png") }
+            ChessId { role: RED,   kind: LION     } => { load_asset_file!("rl.png") }
+            ChessId { role: RED,   kind: TIGER    } => { load_asset_file!("rt.png") }
+            ChessId { role: RED,   kind: PANTHER  } => { load_asset_file!("rp.png") }
+            ChessId { role: RED,   kind: WOLF     } => { load_asset_file!("rw.png") }
+            ChessId { role: RED,   kind: DOG      } => { load_asset_file!("rd.png") }
+            ChessId { role: RED,   kind: CAT      } => { load_asset_file!("rc.png") }
+            ChessId { role: RED,   kind: RAT      } => { load_asset_file!("rr.png") }
+            ChessId { role: BLACK, kind: ELEPHANT } => { load_asset_file!("be.png") }
+            ChessId { role: BLACK, kind: LION     } => { load_asset_file!("bl.png") }
+            ChessId { role: BLACK, kind: TIGER    } => { load_asset_file!("bt.png") }
+            ChessId { role: BLACK, kind: PANTHER  } => { load_asset_file!("bp.png") }
+            ChessId { role: BLACK, kind: WOLF     } => { load_asset_file!("bw.png") }
+            ChessId { role: BLACK, kind: DOG      } => { load_asset_file!("bd.png") }
+            ChessId { role: BLACK, kind: CAT      } => { load_asset_file!("bc.png") }
+            ChessId { role: BLACK, kind: RAT      } => { load_asset_file!("br.png") }
+            _ => { unreachable!("not found chess asset") }
+        }
+    ).expect("load assets failed")
 }
 
 impl Game {
@@ -84,8 +91,12 @@ impl Game {
             board,
             computer,
             computer_turn: false,
-            board_texture: texture_creator.load_texture("assets/board.png").unwrap(),
-            selected_frame: texture_creator.load_texture("assets/oos.gif").unwrap(),
+            board_texture: texture_creator
+                .load_texture_rw(load_asset_file!("board.png"))
+                .expect("board.png"),
+            selected_frame: texture_creator
+                .load_texture_rw(load_asset_file!("oos.gif"))
+                .expect("oos.gif"),
             selected_chess: None,
             movable_pos: Vec::new(),
             canvas,

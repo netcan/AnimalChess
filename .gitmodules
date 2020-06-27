@@ -1,0 +1,3 @@
+[submodule "rust-sdl2"]
+	path = rust-sdl2
+	url = https://github.com/netcan/rust-sdl2

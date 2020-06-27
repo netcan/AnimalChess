@@ -101,4 +101,4 @@ T #@# L
 - [x] encode/decode move
 - [x] generate fen
 - [x] repr board
-- [ ] patch sdl2 to support `load_texture` from buffer
+- [x] patch sdl2 to support `load_texture` from buffer
