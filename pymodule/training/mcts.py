@@ -80,8 +80,8 @@ class Node():
         mask[self.action_idxes] = False
         self.child_priors[mask] = 0.0
 
-        if isinstance(self.parent, DummyNode): # root
-            self.add_dirichlet_noise()
+        #  if isinstance(self.parent, DummyNode): # root
+        self.add_dirichlet_noise()
 
     def backup(self, value_estimate: float):
         current = self
