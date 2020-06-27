@@ -13,3 +13,4 @@ stacks.folded
 *.gz
 *.so
 push.sh
+backup.sh

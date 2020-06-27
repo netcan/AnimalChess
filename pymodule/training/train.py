@@ -28,7 +28,7 @@ def load_dataset(iter):
 
 def train(iter, epoch_start=0, epoch_stop=100, seed=0):
     torch.manual_seed(seed)
-    net = load_net()
+    net = load_net(iter)
     net.train()
 
     cuda = torch.cuda.is_available()
@@ -68,7 +68,7 @@ def train(iter, epoch_start=0, epoch_stop=100, seed=0):
         scheduler.step()
 
     fig = plt.figure()
-    ax = fig.add_subplot(222)
+    ax = fig.add_subplot()
     ax.scatter([e for e in range(1,epoch_stop+1,1)], losses_per_epoch)
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Loss per batch")
