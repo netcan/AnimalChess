@@ -50,7 +50,7 @@ fn get_chess_texture<T>(chess: ChessId, texture_creator: &TextureCreator<T>) -> 
     use RoleType::*;
     use ChessKind::*;
 
-    texture_creator.load_texture_rw(
+    texture_creator.load_texture_bytes(
         match chess {
             ChessId { role: RED,   kind: ELEPHANT } => { load_asset_file!("re.png") }
             ChessId { role: RED,   kind: LION     } => { load_asset_file!("rl.png") }
@@ -92,10 +92,10 @@ impl Game {
             computer,
             computer_turn: false,
             board_texture: texture_creator
-                .load_texture_rw(load_asset_file!("board.png"))
+                .load_texture_bytes(load_asset_file!("board.png"))
                 .expect("board.png"),
             selected_frame: texture_creator
-                .load_texture_rw(load_asset_file!("oos.gif"))
+                .load_texture_bytes(load_asset_file!("oos.gif"))
                 .expect("oos.gif"),
             selected_chess: None,
             movable_pos: Vec::new(),
