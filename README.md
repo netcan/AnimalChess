@@ -1,5 +1,6 @@
 ## Animal Chess
-Animal Fight Chess Game（斗兽棋） written in rust.
+Animal Fight Chess Game（斗兽棋） written in rust, using Alpha-Beta-Pruning algorithm, and implement AlphaZero algorithm for training.
+
 ![assets/animal_chess.png](assets/animal_chess.png)
 
 ## How To Play
