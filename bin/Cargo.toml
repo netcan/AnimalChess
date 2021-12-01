@@ -13,8 +13,7 @@ keywords = ["gamedev", "chess", "ai", "sdl"]
 animal_chess_core = { path = "../core" }
 
 [dependencies.sdl2]
-path = "../rust-sdl2"
-version = "0.34.1"
+version = "0.35"
 default-features = false
 features = ["image", "unsafe_textures"]
 
