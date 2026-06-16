@@ -8,7 +8,7 @@ edition = "2018"
 animal_chess_core = { path = "../core" }
 
 [dependencies.pyo3]
-version = "0.10.1"
+version = "0.29.0"
 features = ["extension-module"]
 
 [lib]
